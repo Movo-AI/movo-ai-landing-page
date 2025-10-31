@@ -83,24 +83,31 @@ export default function InterestFormPage() {
     setIsSubmitting(true);
 
     try {
-      // Normalize phone number to E.164 if present
+      // Normalize phone number to E.164 if present (includes country code)
       let normalizedPhone = values.phone;
       if (normalizedPhone && normalizedPhone.trim()) {
         normalizedPhone = normalizePhoneNumber(normalizedPhone.trim());
       }
 
-      // Prepare payload - only include email/phone if they have values
-      const payload = {
-        firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
+      // Prepare payload with backend's expected field names
+      const payload: {
+        first_name: string;
+        last_name: string;
+        message: string;
+        phone_number?: string;
+        email_address?: string;
+      } = {
+        first_name: values.firstName.trim(),
+        last_name: values.lastName.trim(),
         message: values.message.trim(),
-        ...(values.email?.trim() && { email: values.email.trim() }),
-        ...(normalizedPhone && { phone: normalizedPhone }),
+        ...(normalizedPhone && { phone_number: normalizedPhone }),
+        ...(values.email?.trim() && { email_address: values.email.trim() }),
       };
 
-      // Get backend URL from environment variable
+      // Get backend URL from environment variable or use deployed URL
       const backendUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+        process.env.NEXT_PUBLIC_API_BASE_URL ||
+        "https://movo-backend-jet.vercel.app";
 
       const response = await fetch(`${backendUrl}/api/trigger-call`, {
         method: "POST",
@@ -125,15 +132,27 @@ export default function InterestFormPage() {
         // Handle validation errors (4xx)
         if (response.status >= 400 && response.status < 500) {
           // Set field-level errors if provided by server
+          // Map backend field names (snake_case) to form field names (camelCase)
+          const fieldNameMap: Record<string, keyof FormValues> = {
+            first_name: "firstName",
+            last_name: "lastName",
+            phone_number: "phone",
+            email_address: "email",
+            message: "message",
+          };
+
           if (errorData.errors) {
-            Object.keys(errorData.errors).forEach((field) => {
-              form.setError(field as keyof FormValues, {
+            Object.keys(errorData.errors).forEach((backendField) => {
+              const formField = fieldNameMap[backendField] || backendField;
+              form.setError(formField as keyof FormValues, {
                 type: "server",
-                message: errorData.errors[field],
+                message: errorData.errors[backendField],
               });
             });
           } else if (errorData.message) {
-            toast.error(errorData.message || "Please check your input and try again.");
+            toast.error(
+              errorData.message || "Please check your input and try again."
+            );
           } else {
             toast.error("Please check your input and try again.");
           }
@@ -148,12 +167,9 @@ export default function InterestFormPage() {
       }
 
       // Success
-      toast.success(
-        "We'll call you shortly at the number you provided.",
-        {
-          duration: 5000,
-        }
-      );
+      toast.success("We'll call you shortly at the number you provided.", {
+        duration: 5000,
+      });
 
       // Reset form after successful submission
       form.reset();
@@ -356,7 +372,9 @@ export default function InterestFormPage() {
                         className="min-h-32 border border-gray-200 focus:border-[#FF7A29] focus:ring-2 focus:ring-[#FF7A29]/20 focus:ring-offset-0 resize-none"
                         aria-invalid={!!messageError}
                         aria-describedby={
-                          messageError ? "message-error message-hint" : "message-hint"
+                          messageError
+                            ? "message-error message-hint"
+                            : "message-hint"
                         }
                         {...field}
                       />
@@ -381,7 +399,10 @@ export default function InterestFormPage() {
                   aria-busy={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <span className="flex items-center gap-2" aria-live="polite">
+                    <span
+                      className="flex items-center gap-2"
+                      aria-live="polite"
+                    >
                       <svg
                         className="animate-spin h-5 w-5"
                         xmlns="http://www.w3.org/2000/svg"
