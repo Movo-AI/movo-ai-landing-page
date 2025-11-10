@@ -1,62 +1,93 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Menu, X } from "lucide-react"
+import { useState } from "react"
 
 export function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-background border-b border-border">
-      <div className="container max-w-[1400px] mx-auto flex h-16 md:h-20 items-center justify-between px-6 md:px-8">
-        <div className="flex items-center gap-4 md:gap-12">
-          <a href="/" className="flex items-center gap-2">
-            <span className="font-bold text-2xl md:text-3xl text-foreground lowercase">movo</span>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+      <div className="max-w-[1600px] mx-auto flex h-20 items-center justify-between px-6 md:px-8 lg:px-16">
+        <a href="/" className="flex items-center gap-3 group">
+          <img
+            src="/images/design-mode/Kids%20Playing%20Sport%20Graphic%20Nov%209%202025%20%287%29%20%281%29.png"
+            alt="Movo Logo"
+            className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
+          />
+          <span className="font-bold text-2xl text-gray-900 tracking-tight">Movo</span>
+        </a>
+
+        <nav className="hidden md:flex items-center gap-10">
+          <a href="#product" className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors">
+            Product
           </a>
-          <nav className="hidden md:flex items-center gap-8">
-            <a
-              href="mailto:ari@movoai.co"
-              className="text-base font-normal text-foreground hover:text-foreground/70 transition-colors"
-            >
-              Contact
-            </a>
-            <span className="text-base font-normal text-foreground hover:text-foreground/70 transition-colors cursor-pointer">
-              Company
-            </span>
-          </nav>
-        </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <Button
-            variant="ghost"
-            size="lg"
-            className="hidden lg:inline-flex bg-background border border-border hover:bg-foreground/5 rounded-full px-8 h-12 text-base"
-            asChild
+          <a href="#solution" className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors">
+            Solution
+          </a>
+          <a href="#success" className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors">
+            Success
+          </a>
+        </nav>
+
+        <Button
+          size="lg"
+          className="hidden md:flex bg-gray-900 hover:bg-gray-800 text-white rounded-sm px-8 h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+          asChild
+        >
+          <a href="https://calendly.com/ari-movoai/30min" target="_blank" rel="noopener noreferrer">
+            Book a demo
+          </a>
+        </Button>
+
+        <div className="flex md:hidden">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+            aria-label="Toggle menu"
           >
-            <a href="/portal">
-              <svg className="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-              Academy Login
-            </a>
-          </Button>
-          <Button
-            size="lg"
-            className="hidden md:inline-flex bg-foreground text-background hover:bg-foreground/90 rounded-full px-8 h-12 text-base font-semibold"
-            asChild
-          >
-            <a href="https://calendly.com/ari-movoai/30min" target="_blank" rel="noopener noreferrer">
-              Book a Demo
-            </a>
-          </Button>
-          <Button variant="ghost" size="icon" className="md:hidden h-10 w-10">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </Button>
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
+
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
+          <nav className="flex flex-col px-6 py-4">
+            <a
+              href="#product"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100"
+            >
+              Product
+            </a>
+            <a
+              href="#solution"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100"
+            >
+              Solution
+            </a>
+            <a
+              href="#success"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100"
+            >
+              Success
+            </a>
+            <a
+              href="https://calendly.com/ari-movoai/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-3 text-base font-medium text-gray-900 hover:text-gray-700 transition-colors"
+            >
+              Book a demo
+            </a>
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

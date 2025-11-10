@@ -4,13 +4,40 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated to new Movo color palette */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(220 20% 15%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(220 20% 15%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(220 20% 15%);
+  --primary: hsl(220 20% 15%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(0 0% 96%);
+  --secondary-foreground: hsl(220 20% 15%);
+  --muted: hsl(0 0% 96%);
+  --muted-foreground: hsl(0 0% 45%);
+  --accent: hsl(220 20% 15%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 90%);
+  --input: hsl(0 0% 96%);
+  --ring: hsl(220 20% 15%);
+  --radius: 16px;
+
+  /* Added Airtable-style background tints */
+  --bg-lavender: #f9f7ff;
+  --bg-beige: #fff8ed;
+  --bg-sky: #eaf6fb;
+  --bg-white: #ffffff;
+  /* </CHANGE> */
+
   --movo-purple: #7f5af0;
   --movo-lavender: #f4f1ff;
   --movo-plum: #201437;
   --movo-amber: #ffb86b;
 
-  --background: hsl(0 0% 100%);
+  /* --background: hsl(0 0% 100%);
   --foreground: #201437;
   --card: hsl(0 0% 100%);
   --card-foreground: #201437;
@@ -29,7 +56,7 @@
   --border: hsl(0 0% 90%);
   --input: hsl(0 0% 96%);
   --ring: #7f5af0;
-  --radius: 12px;
+  --radius: 12px; */
   --sidebar: hsl(0 0% 100%);
   --sidebar-foreground: #201437;
   --sidebar-primary: #7f5af0;
@@ -79,13 +106,15 @@
 }
 
 @theme inline {
+  /* Added serif font for headlines */
   --font-sans: var(--font-geist-sans);
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
   /* Added new Movo color tokens */
-  --color-movo-purple: var(--movo-purple);
-  --color-movo-lavender: var(--movo-lavender);
-  --color-movo-plum: var(--movo-plum);
-  --color-movo-amber: var(--movo-amber);
+  --color-movo-purple: #6366f1;
+  --color-movo-lavender: #f5f3ff;
+  --color-movo-plum: #111827;
+  --color-movo-amber: #f59e0b;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -132,35 +161,20 @@
 }
 
 @layer utilities {
-  /* Added backdrop-safari utility for Safari compatibility */
-  .backdrop-safari {
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+  /* Enhanced animations with ultra-premium easing */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
-  .drop-shadow-nav {
-    filter: drop-shadow(0 4px 16px rgba(32, 20, 55, 0.08));
-  }
-
-  .shadow-frosted {
-    box-shadow: 0 10px 40px rgba(32, 20, 55, 0.12);
-  }
-
-  /* Added sunlight-wash gradient background */
-  .bg-sunlight-wash {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.92) 0%,
-      rgba(255, 184, 107, 0.15) 45%,
-      rgba(127, 90, 240, 0.1) 100%
-    );
-  }
-
-  /* Added custom animations for page elements */
   @keyframes fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(80px);
     }
     to {
       opacity: 1;
@@ -174,14 +188,48 @@
       transform: translateY(0px);
     }
     50% {
-      transform: translateY(-20px);
+      transform: translateY(-30px);
+    }
+  }
+
+  /* Added dash animation for connecting lines in brain map */
+  @keyframes dash {
+    0% {
+      stroke-dashoffset: 10;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+  /* </CHANGE> */
+
+  /* Added progress bar animation */
+  @keyframes progress {
+    0%,
+    100% {
+      width: 75%;
+    }
+    50% {
+      width: 95%;
+    }
+  }
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15);
     }
   }
 
   @keyframes scale-in {
     from {
       opacity: 0;
-      transform: scale(0.8);
+      transform: scale(0.9);
     }
     to {
       opacity: 1;
@@ -189,48 +237,98 @@
     }
   }
 
-  @keyframes pulse-slow {
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Add pulse animation with different delays for waveform effect */
+  @keyframes pulse-wave {
     0%,
     100% {
-      opacity: 1;
-      transform: scale(1);
+      transform: scaleY(1);
     }
     50% {
-      opacity: 0.85;
-      transform: scale(1.05);
+      transform: scaleY(1.5);
     }
+  }
+  /* </CHANGE> */
+
+  /* Premium easing curves */
+  .animate-fade-in {
+    animation: fade-in 1.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .animate-fade-in-up {
-    animation: fade-in-up 0.8s ease-out forwards;
+    animation: fade-in-up 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-float {
-    animation: float 3s ease-in-out infinite;
+    animation: float 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Added delayed float animation for staggered effect */
+  .animate-float-delayed {
+    animation: float 8s cubic-bezier(0.4, 0, 0.6, 1) infinite 1s;
+  }
+
+  /* Added dash animation utility class for brain map connecting lines */
+  .animate-dash {
+    animation: dash 2s linear infinite;
+  }
+  /* </CHANGE> */
+
+  .animate-glow-pulse {
+    animation: glow-pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   .animate-scale-in {
-    animation: scale-in 0.6s ease-out forwards;
+    animation: scale-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-scroll {
+    animation: scroll 40s linear infinite;
+  }
+
+  .animate-scroll-slow {
+    animation: scroll 50s linear infinite;
   }
 
   .animate-pulse-slow {
-    animation: pulse-slow 3s ease-in-out infinite;
+    animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  .animate-in {
-    opacity: 1 !important;
-    transform: translateY(0) !important;
-  }
-
-  .animation-delay-100 {
-    animation-delay: 100ms;
-  }
-
-  .animation-delay-200 {
-    animation-delay: 200ms;
+  .animation-delay-150 {
+    animation-delay: 150ms;
   }
 
   .animation-delay-300 {
     animation-delay: 300ms;
   }
+
+  .animation-delay-450 {
+    animation-delay: 450ms;
+  }
+
+  /* Scroll reveal animations */
+  .fade-on-scroll {
+    opacity: 0;
+    transform: translateY(100px);
+    transition: opacity 1.8s cubic-bezier(0.16, 1, 0.3, 1), transform 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fade-on-scroll.animate-in {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+
+  /* Custom shadow utilities */
+  .shadow-3xl {
+    box-shadow: 0 35px 80px -15px rgba(0, 0, 0, 0.3);
+  }
+  /* </CHANGE> */
 }

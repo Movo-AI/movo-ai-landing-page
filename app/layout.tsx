@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Geist } from "next/font/google"
 import { Playfair_Display, Caveat } from "next/font/google"
 import Script from "next/script"
-import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -49,10 +48,7 @@ export default function RootLayout({
           />
         )}
       </head>
-      <body className={`${geistSans.variable} ${playfair.variable} ${caveat.variable} font-sans`}>
-        {children}
-        <Toaster />
-      </body>
+      <body className={`${geistSans.variable} ${playfair.variable} ${caveat.variable} font-sans`}>{children}</body>
     </html>
   )
 }
