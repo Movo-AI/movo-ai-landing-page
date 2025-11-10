@@ -565,9 +565,9 @@ export default function Home() {
 
               <button
                 onClick={handleLearnVideoPlay}
-                className="group flex items-center gap-3 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-base font-medium rounded-sm transition-all duration-300 mb-16 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px] min-w-[320px]"
+                className="group flex items-center gap-3 px-6 py-3 md:px-8 md:py-4 bg-gray-900 hover:bg-gray-800 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 mb-16 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[48px] md:min-h-[56px] w-full max-w-[260px] md:max-w-[320px] md:min-w-[320px] mx-auto md:mx-0"
               >
-                <div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+                <div className="relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center flex-shrink-0">
                   {isLearnVideoPlaying ? (
                     <div className="flex items-center gap-1">
                       <div
@@ -796,10 +796,12 @@ export default function Home() {
 
           {/* More Leads Group */}
           <div className="mb-24">
-            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-              Drives New Revenue
-              <span className="text-gray-400 font-normal text-xl">→ Capture every opportunity</span>
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+              <span className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                Drives New Revenue
+              </span>
+              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Capture every opportunity</span>
             </h3>
             <div className="grid md:grid-cols-2 gap-8">
               {/* Never Miss a Call */}
@@ -869,10 +871,12 @@ export default function Home() {
 
           {/* More Sales Group */}
           <div className="mb-24">
-            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              Closes Every Conversation
-              <span className="text-gray-400 font-normal text-xl">→ Turn calls into enrollments</span>
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+              <span className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                Closes Every Conversation
+              </span>
+              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Turn calls into enrollments</span>
             </h3>
             <div className="grid md:grid-cols-2 gap-8">
               {/* Fill Every Program */}
@@ -944,10 +948,12 @@ export default function Home() {
 
           {/* Less Work Group */}
           <div>
-            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-              Handles Everything Else
-              <span className="text-gray-400 font-normal text-xl">→ Runs on autopilot</span>
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+              <span className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                Handles Everything Else
+              </span>
+              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Runs on autopilot</span>
             </h3>
             {/* Centered the single card using mx-auto */}
             <div className="max-w-2xl mx-auto">

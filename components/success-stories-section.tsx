@@ -67,20 +67,8 @@ export function SuccessStoriesSection() {
               </p>
             </div>
             <div className="flex items-center gap-4 flex-shrink-0">
-              <button
-                onClick={goToPrevious}
-                className="w-12 h-12 flex items-center justify-center border-2 border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white rounded-full transition-all duration-300"
-                aria-label="Previous case study"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={goToNext}
-                className="w-12 h-12 flex items-center justify-center border-2 border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white rounded-full transition-all duration-300"
-                aria-label="Next case study"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
+              
+              
             </div>
           </div>
         </div>
@@ -132,14 +120,7 @@ export function SuccessStoriesSection() {
         {/* Pagination dots */}
         <div className="flex items-center justify-center gap-2 mt-12">
           {caseStudies.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentIndex(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex ? "bg-gray-900 w-8" : "bg-gray-300 hover:bg-gray-400"
-              }`}
-              aria-label={`Go to case study ${index + 1}`}
-            />
+            null
           ))}
         </div>
 
