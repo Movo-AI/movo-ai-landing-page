@@ -745,7 +745,7 @@ export default function Home() {
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div>
                         <h3 className="text-base sm:text-lg font-bold text-gray-900">Move Intelligence</h3>
-                        <p className="text-xs sm:text-sm text-gray-500">Real-time academy insights</p>
+                        
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 rounded-lg border border-green-200">
@@ -798,8 +798,8 @@ export default function Home() {
 
                   {/* Two-column layout: Insights & Conversations - Stack on mobile */}
                   <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-                    {/* Left: What Movo Learned */}
-                    <div className="md:border-r border-gray-200 md:pr-4 sm:md:pr-6">
+                    {/* Left: What Movo Learned - Added mobile margin top */}
+                    <div className="md:border-r border-gray-200 md:pr-4 sm:md:pr-6 mt-4 md:mt-0">
                       <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
                         <span className="text-base sm:text-xl">💡</span>
                         <h4 className="text-sm sm:text-base font-bold text-gray-900">What Movo Learned This Week</h4>
@@ -826,8 +826,8 @@ export default function Home() {
                       </ul>
                     </div>
 
-                    {/* Right: Recent Conversations */}
-                    <div className="md:pl-4 sm:md:pl-6">
+                    {/* Right: Recent Conversations - Hidden on mobile with md:block */}
+                    <div className="hidden md:block md:pl-4 sm:md:pl-6">
                       <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-4">
                         Recent Conversations
                       </h4>
