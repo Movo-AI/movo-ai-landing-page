@@ -757,38 +757,38 @@ export default function Home() {
 
                 {/* Content - Reduced padding for mobile */}
                 <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="text-left col-span-2 lg:col-span-1">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <div className="text-left">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
                         ${dashboardStats.revenue.toLocaleString()}
                       </div>
-                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5 sm:mb-1">
+                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
                         REVENUE THIS WEEK
                       </div>
-                      <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm text-green-600 font-semibold">
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-green-600 font-semibold">
                         <span>↑</span>
                         <span>20% from last week</span>
                       </div>
                     </div>
-                    <div className="text-left lg:border-l border-gray-200 lg:pl-3 sm:lg:pl-4">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                    <div className="text-left border-l border-gray-200 pl-4 sm:pl-6">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
                         {dashboardStats.calls}
                       </div>
                       <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
                         CALLS
                       </div>
                     </div>
-                    <div className="text-left lg:border-l border-gray-200 lg:pl-3 sm:lg:pl-4">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                    <div className="text-left border-l border-gray-200 pl-4 sm:pl-6">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
                         {dashboardStats.messages}
                       </div>
                       <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
                         MESSAGES
                       </div>
                     </div>
-                    <div className="text-left lg:border-l border-gray-200 lg:pl-3 sm:lg:pl-4">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
-                        {dashboardStats.emails}
+                    <div className="text-left border-l border-gray-200 pl-4 sm:pl-6">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+                        {dashboardStats.emails.toLocaleString()}
                       </div>
                       <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
                         EMAILS
@@ -1184,12 +1184,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right - Horizontal stats with animated numbers */}
-            <div ref={dashboardRef} className="flex flex-col gap-8 sm:flex-row sm:gap-12 md:gap-16 justify-center">
+            {/* Right - Horizontal stats with static numbers */}
+            <div className="flex flex-col gap-8 sm:flex-row sm:gap-12 md:gap-16 justify-center">
               {/* Stat 1 - Response time */}
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
-                  <span>{` < ${dashboardStats.response}s`}</span>
+                  <span>&lt;5s</span>
                 </div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide px-4">
                   Average response time
@@ -1199,7 +1199,7 @@ export default function Home() {
               {/* Stat 2 - Conversions */}
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
-                  <span>+{dashboardStats.conversion}%</span>
+                  <span>+47%</span>
                 </div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide px-4">
                   More conversions
@@ -1209,7 +1209,7 @@ export default function Home() {
               {/* Stat 3 - Revenue */}
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
-                  <span>+${dashboardStats.revenue.toLocaleString()}</span>
+                  <span>+$7,800</span>
                 </div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide px-4">
                   New monthly revenue
