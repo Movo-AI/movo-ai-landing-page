@@ -76,12 +76,12 @@ export function SuccessStoriesSection() {
             return (
               <div
                 key={index}
-                className="bg-gradient-to-br from-blue-100 via-indigo-50 to-yellow-100 rounded-3xl p-10 min-h-[500px] flex flex-col justify-between transition-all duration-500 hover:shadow-xl relative"
+                className="bg-gradient-to-br from-amber-100 via-orange-50 to-yellow-100 rounded-3xl p-10 min-h-[500px] flex flex-col justify-between transition-all duration-500 hover:shadow-xl relative"
               >
                 <div className="absolute top-6 right-6 text-xs text-gray-400 italic">{caseStudy.timestamp}</div>
 
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 relative flex-shrink-0">
+                  <div className="w-12 h-12 relative flex-shrink-0 self-center">
                     <Image
                       src={caseStudy.logo || "/placeholder.svg"}
                       alt={`${caseStudy.company} logo`}
@@ -89,7 +89,7 @@ export function SuccessStoriesSection() {
                       className="object-contain"
                     />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{caseStudy.company}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 self-center">{caseStudy.company}</h3>
                 </div>
 
                 <div className="mb-4">
