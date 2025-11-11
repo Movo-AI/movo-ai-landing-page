@@ -744,7 +744,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div>
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900">Move Intelligence</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900">Movo Intelligence</h3>
                         
                       </div>
                     </div>
