@@ -22,6 +22,65 @@ function normalizePhoneNumber(phone: string): string {
   return "+1" + cleaned
 }
 
+/**
+ * Normalizes Vapi API error messages to user-friendly messages
+ */
+function normalizeErrorMessage(errorText: string): string {
+  try {
+    // Try to parse as JSON
+    const errorData = JSON.parse(errorText)
+    
+    // Extract message array if it exists
+    if (errorData.message && Array.isArray(errorData.message)) {
+      const messages = errorData.message
+      
+      // Check for common error patterns and return user-friendly messages
+      for (const msg of messages) {
+        if (typeof msg === "string") {
+          // Phone number validation errors
+          if (msg.includes("customer.number") || msg.includes("phone number") || msg.includes("E.164")) {
+            return "Please enter a valid phone number with country code (e.g., +1 for US numbers)."
+          }
+          
+          // Authentication errors
+          if (msg.includes("unauthorized") || msg.includes("authentication") || msg.includes("token")) {
+            return "There was an authentication error. Please try again later."
+          }
+          
+          // Assistant/phone number ID errors
+          if (msg.includes("assistant") || msg.includes("phoneNumber")) {
+            return "There was an issue with the call configuration. Please try again later."
+          }
+          
+          // Generic validation errors
+          if (msg.includes("required") || msg.includes("must be")) {
+            return "Please check that all fields are filled out correctly."
+          }
+        }
+      }
+      
+      // If we have messages but none matched, return the first one (cleaned up)
+      if (messages.length > 0 && typeof messages[0] === "string") {
+        // Remove technical details and return a cleaner message
+        return messages[0].split(".")[0] + "."
+      }
+    }
+    
+    // If there's a generic error message
+    if (errorData.error && typeof errorData.error === "string") {
+      return errorData.error
+    }
+  } catch {
+    // If parsing fails, check if it's a plain text error
+    if (errorText.includes("phone") || errorText.includes("E.164")) {
+      return "Please enter a valid phone number with country code."
+    }
+  }
+  
+  // Fallback to generic error message
+  return "Unable to initiate the call. Please check your information and try again."
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -92,8 +151,9 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error("[API] Vapi API error:", response.status, errorText)
+      const userFriendlyError = normalizeErrorMessage(errorText)
       return NextResponse.json(
-        { error: `Failed to initiate call: ${errorText}` },
+        { error: userFriendlyError },
         { status: response.status }
       )
     }
@@ -108,7 +168,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[API] Error creating call:", error)
     return NextResponse.json(
-      { error: `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}` },
+      { error: "An unexpected error occurred. Please try again later." },
       { status: 500 }
     )
   }
