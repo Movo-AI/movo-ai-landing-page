@@ -21,7 +21,7 @@ const caseStudies = [
   {
     company: "MPAC Sports Training",
     logo: "/mpac-sports-logo.png",
-    headline: "Every parent gets a personal response — instantly.",
+    headline: "Every parent gets a personal response.",
     quote:
       "Movo learned our pricing, schedule, and class levels within a week. It now handles 90% of parent conversations — from first inquiry to booked trial. Families love how personal it feels. We just check Stripe and see new payments every day.",
     stats: [

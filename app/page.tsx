@@ -453,7 +453,7 @@ export default function Home() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 md:px-8 lg:px-16 py-32 md:py-20 text-center">
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-normal leading-tight text-white mb-6 max-w-5xl">
+          <h1 className="font-serif text-4xl sm:text-5xl md:text-5xl lg:text-6xl xl:text-7xl font-normal leading-tight text-white mb-6 max-w-5xl">
             The fastest-selling teammate your academy will ever have
           </h1>
 
@@ -925,7 +925,6 @@ export default function Home() {
                     </div>
                     <div className="flex items-center justify-between pb-3 border-b border-indigo-200 mt-6">
                       <span className="text-xs font-semibold text-gray-700">Top Converting Offer</span>
-                      <span className="bg-green-600 text-white text-xs px-2 py-1 rounded shadow">72% lift</span>
                     </div>
                     <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform">
                       <div className="text-lg font-bold text-gray-900">"Free Trial"</div>
@@ -1143,16 +1142,28 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-24 bg-white border-t border-gray-200">
         <div className="mx-auto max-w-7xl px-10">
+          <div className="text-center mb-8">
+            <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
+              Movo AI automates communications and may use AI-generated voice or text responses. Conversations may be
+              recorded or analyzed to improve service quality, consistent with our{" "}
+              <a href="/privacy" className="text-gray-900 underline hover:text-gray-700 transition-colors">
+                Privacy Policy
+              </a>
+              .
+            </p>
+          </div>
+          {/* </CHANGE> */}
+
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <p className="text-gray-600">© 2025 Movo AI, Inc. All rights reserved.</p>
             <div className="flex items-center gap-8">
               <a href="/portal/login" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
                 Portal
               </a>
-              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
+              <a href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
                 Terms
               </a>
-              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
+              <a href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
                 Privacy
               </a>
             </div>
