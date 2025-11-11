@@ -386,68 +386,76 @@ export default function Home() {
 
   useEffect(() => {
     const observerOptions = {
-      threshold: 0.3,
+      threshold: 0.1, // Trigger when 10% visible
       rootMargin: "0px",
     }
 
     const animateDashboard = (entries: IntersectionObserverEntry[]) => {
       entries.forEach((entry) => {
+        console.log("[v0] Dashboard intersection:", entry.isIntersecting, "Already visible:", isDashboardVisible)
+
         if (entry.isIntersecting && !isDashboardVisible) {
+          console.log("[v0] Starting dashboard animation")
           setIsDashboardVisible(true)
 
-          // Animate revenue (target: 7840)
+          // Animate revenue from 0 to 6300
           let revenueVal = 0
           const revenueTimer = setInterval(() => {
-            revenueVal += 130
-            if (revenueVal >= 7840) {
-              setDashboardStats((prev) => ({ ...prev, revenue: 7840 }))
+            revenueVal += 126 // Will reach 6300 in ~50 frames (1 second)
+            if (revenueVal >= 6300) {
+              setDashboardStats((prev) => ({ ...prev, revenue: 6300 }))
               clearInterval(revenueTimer)
+              console.log("[v0] Revenue animation complete: 6300")
             } else {
               setDashboardStats((prev) => ({ ...prev, revenue: Math.floor(revenueVal) }))
             }
           }, 20)
 
-          // Animate calls (target: 47)
+          // Animate calls from 0 to 900
           let callsVal = 0
           const callsTimer = setInterval(() => {
-            callsVal += 1
-            if (callsVal >= 47) {
-              setDashboardStats((prev) => ({ ...prev, calls: 47 }))
+            callsVal += 18 // Will reach 900 in ~50 frames (1 second)
+            if (callsVal >= 900) {
+              setDashboardStats((prev) => ({ ...prev, calls: 900 }))
               clearInterval(callsTimer)
+              console.log("[v0] Calls animation complete: 900")
             } else {
               setDashboardStats((prev) => ({ ...prev, calls: Math.floor(callsVal) }))
             }
-          }, 30)
+          }, 20)
 
-          // Animate messages (target: 312)
+          // Animate messages from 0 to 650
           let messagesVal = 0
           const messagesTimer = setInterval(() => {
-            messagesVal += 5
-            if (messagesVal >= 312) {
-              setDashboardStats((prev) => ({ ...prev, messages: 312 }))
+            messagesVal += 13 // Will reach 650 in ~50 frames (1 second)
+            if (messagesVal >= 650) {
+              setDashboardStats((prev) => ({ ...prev, messages: 650 }))
               clearInterval(messagesTimer)
+              console.log("[v0] Messages animation complete: 650")
             } else {
               setDashboardStats((prev) => ({ ...prev, messages: Math.floor(messagesVal) }))
             }
-          }, 25)
+          }, 20)
 
-          // Animate emails (target: 456)
+          // Animate emails from 0 to 2500
           let emailsVal = 0
           const emailsTimer = setInterval(() => {
-            emailsVal += 7
-            if (emailsVal >= 456) {
-              setDashboardStats((prev) => ({ ...prev, emails: 456 }))
+            emailsVal += 50 // Will reach 2500 in ~50 frames (1 second)
+            if (emailsVal >= 2500) {
+              setDashboardStats((prev) => ({ ...prev, emails: 2500 }))
               clearInterval(emailsTimer)
+              console.log("[v0] Emails animation complete: 2500")
             } else {
               setDashboardStats((prev) => ({ ...prev, emails: Math.floor(emailsVal) }))
             }
-          }, 25)
+          }, 20)
         }
       })
     }
 
     const observer = new IntersectionObserver(animateDashboard, observerOptions)
     if (dashboardRef.current) {
+      console.log("[v0] Observer attached to dashboard")
       observer.observe(dashboardRef.current)
     }
 
@@ -719,7 +727,7 @@ export default function Home() {
 
           {/* Right side - Gradient background with Premium Movo Dashboard */}
           <div
-            className="relative px-4 sm:px-8 md:px-16 lg:px-20 py-12 sm:py-16 md:py-20 flex items-center justify-center overflow-hidden"
+            className="relative px-4 sm:px-6 md:px-12 lg:px-16 py-8 sm:py-12 md:py-16 flex items-center justify-center overflow-hidden"
             style={{
               backgroundImage:
                 "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%2010%202025%20%282%29-V8JNogRABiiVjppDmMwDRCWb6aV7yD.png)",
@@ -730,74 +738,86 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-blue-50/40 to-white/50" />
 
             <div ref={dashboardRef} className="relative z-10 w-full max-w-4xl">
-              <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+              <div className="bg-white rounded-lg sm:rounded-xl shadow-xl overflow-hidden border border-gray-200">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-100">
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900">Move Intelligence</h3>
-                        <p className="text-sm text-gray-500">Real-time academy insights</p>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900">Move Intelligence</h3>
+                        <p className="text-xs sm:text-sm text-gray-500">Real-time academy insights</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-semibold text-green-700">Active</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 rounded-lg border border-green-200">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs sm:text-sm font-semibold text-green-700">Active</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Content - Reduced padding for mobile */}
+                <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div className="text-left col-span-2 lg:col-span-1">
-                      <div className="text-4xl font-bold text-gray-900 mb-1">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
                         ${dashboardStats.revenue.toLocaleString()}
                       </div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                        Revenue THIS WEEK
+                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5 sm:mb-1">
+                        REVENUE THIS WEEK
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-green-600 font-semibold">
+                      <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm text-green-600 font-semibold">
                         <span>↑</span>
                         <span>20% from last week</span>
                       </div>
                     </div>
-                    <div className="text-left lg:border-l border-gray-200 lg:pl-4">
-                      <div className="text-4xl font-bold text-gray-900 mb-1">{dashboardStats.calls}</div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">CALLS</div>
+                    <div className="text-left lg:border-l border-gray-200 lg:pl-3 sm:lg:pl-4">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                        {dashboardStats.calls}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
+                        CALLS
+                      </div>
                     </div>
-                    <div className="text-left lg:border-l border-gray-200 lg:pl-4">
-                      <div className="text-4xl font-bold text-gray-900 mb-1">{dashboardStats.messages}</div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">MESSAGES</div>
+                    <div className="text-left lg:border-l border-gray-200 lg:pl-3 sm:lg:pl-4">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                        {dashboardStats.messages}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
+                        MESSAGES
+                      </div>
                     </div>
-                    <div className="text-left lg:border-l border-gray-200 lg:pl-4">
-                      <div className="text-4xl font-bold text-gray-900 mb-1">{dashboardStats.emails}</div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">EMAILS</div>
+                    <div className="text-left lg:border-l border-gray-200 lg:pl-3 sm:lg:pl-4">
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                        {dashboardStats.emails}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
+                        EMAILS
+                      </div>
                     </div>
                   </div>
 
-                  {/* Two-column layout: Insights & Conversations */}
-                  <div className="grid md:grid-cols-2 gap-6">
+                  {/* Two-column layout: Insights & Conversations - Stack on mobile */}
+                  <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                     {/* Left: What Movo Learned */}
-                    <div className="md:border-r border-gray-200 md:pr-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-xl">💡</span>
-                        <h4 className="text-base font-bold text-gray-900">What Movo Learned This Week</h4>
+                    <div className="md:border-r border-gray-200 md:pr-4 sm:md:pr-6">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
+                        <span className="text-base sm:text-xl">💡</span>
+                        <h4 className="text-sm sm:text-base font-bold text-gray-900">What Movo Learned This Week</h4>
                       </div>
-                      <ul className="space-y-2.5 text-sm text-gray-700">
-                        <li className="flex items-start gap-2">
+                      <ul className="space-y-1.5 sm:space-y-2.5 text-xs sm:text-sm text-gray-700">
+                        <li className="flex items-start gap-1.5 sm:gap-2">
                           <span className="text-gray-400 flex-shrink-0">•</span>
                           <span>Parents ask most about 'Saturday programs'</span>
                         </li>
-                        <li className="flex items-start gap-2">
+                        <li className="flex items-start gap-1.5 sm:gap-2">
                           <span className="text-gray-400 flex-shrink-0">•</span>
                           <span>Peak call times: 4–8pm</span>
                         </li>
-                        <li className="flex items-start gap-2">
+                        <li className="flex items-start gap-1.5 sm:gap-2">
                           <span className="text-gray-400 flex-shrink-0">•</span>
-                          <span>Best conversion script: "Would you live to book a free trial?"</span>
+                          <span>Best conversion script: "Would you like to book a free trial?"</span>
                         </li>
-                        <li className="flex items-start gap-2">
+                        <li className="flex items-start gap-1.5 sm:gap-2">
                           <span className="text-blue-600 flex-shrink-0">•</span>
                           <span className="font-medium">
                             Most booked program: "Youth Development League (Ages 8–10)"
@@ -807,56 +827,50 @@ export default function Home() {
                     </div>
 
                     {/* Right: Recent Conversations */}
-                    <div className="md:pl-6">
-                      <h4 className="text-base font-bold text-gray-900 mb-4">Recent Conversations</h4>
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div className="text-sm text-gray-700">
+                    <div className="md:pl-4 sm:md:pl-6">
+                      <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-4">
+                        Recent Conversations
+                      </h4>
+                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
+                        <div className="text-xs sm:text-sm text-gray-700">
                           <p>Hi Jessica! Yes, we have two options:</p>
                         </div>
-                        <div className="bg-blue-500 text-white rounded-lg px-4 py-2.5 text-sm">
-                          Saturday 10am ar Wednesday 4pm.
+                        <div className="bg-blue-500 text-white rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm">
+                          Saturday 10am or Wednesday 4pm.
                         </div>
-                        <div className="text-sm text-gray-700">
+                        <div className="text-xs sm:text-sm text-gray-700">
                           <p>Saturday works!</p>
                         </div>
-                        <div className="flex items-center gap-2 bg-white border border-green-200 rounded-lg px-3 py-2 mt-3">
-                          <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-xs font-bold">✓</span>
+                        <div className="flex items-center gap-2 bg-white border border-green-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 mt-2 sm:mt-3">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-[10px] sm:text-xs font-bold">✓</span>
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">Trial booked</p>
-                            <p className="text-xs text-gray-600">$150 revenue</p>
+                            <p className="text-xs sm:text-sm font-semibold text-gray-900">Trial booked</p>
+                            <p className="text-[10px] sm:text-xs text-gray-600">$150 revenде</p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Revenue Growth Chart */}
-                  <div className="border-t border-gray-200 pt-6">
-                    <h4 className="text-base font-bold text-gray-900 mb-2">Revenue Growth</h4>
-                    <p className="text-sm text-gray-600 mb-4">Automated 50% of parent conversations</p>
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-3xl font-bold text-gray-900">+$23.2K</span>
-                      <span className="text-sm text-gray-600">new monthly revenue</span>
-                    </div>
-                  </div>
+                  {/* Revenue Growth Chart - Compact on mobile */}
 
-                  {/* Connected Systems */}
-                  <div className="border-t border-gray-200 pt-6">
-                    <h4 className="text-base font-bold text-gray-900 mb-4">Connected Systems</h4>
-                    <div className="flex flex-wrap gap-3">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-700">IClassPro</span>
+                  {/* Connected Systems - Compact on mobile */}
+                  <div className="border-t border-gray-200 pt-3 sm:pt-4 md:pt-6">
+                    <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-4">Connected Systems</h4>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white rounded-lg border border-gray-200">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">IClassPro</span>
                       </div>
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-700">Stripe</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white rounded-lg border border-gray-200">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">Stripe</span>
                       </div>
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-700">Google Calendar</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white rounded-lg border border-gray-200">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full"></div>
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">Google Calendar</span>
                       </div>
                     </div>
                   </div>
