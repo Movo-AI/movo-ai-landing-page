@@ -10,7 +10,7 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-[1600px] mx-auto flex h-20 items-center justify-between px-6 md:px-8 lg:px-16">
-        <a href="/" className="flex items-end gap-2 group">
+        <a href="/" className="flex items-end gap-0.5 group">
           <img
             src="/images/design-mode/Kids%20Playing%20Sport%20Graphic%20Nov%209%202025%20%287%29%20%281%29.png"
             alt="Movo Logo"

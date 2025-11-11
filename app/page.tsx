@@ -274,7 +274,10 @@ export default function Home() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (audioRef.current && isPlaying) {
-        const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100
+        // The error was here: `audio` was used instead of `audioRef.current`
+        const audio = audioRef.current
+        if (!audio) return // Added safety check
+        const progress = (audio.currentTime / audio.duration) * 100
         setAudioProgress(progress)
       }
     }, 100)
@@ -454,11 +457,12 @@ export default function Home() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 md:px-8 lg:px-16 py-32 md:py-20 text-center">
           <h1 className="font-serif text-4xl sm:text-5xl md:text-5xl lg:text-6xl xl:text-7xl font-normal leading-tight text-white mb-6 max-w-5xl">
-            The fastest-selling teammate your academy will ever have
+            AI That Sells for Your Academy
+            <br />
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-white/90 mb-8 max-w-3xl leading-relaxed px-4">
-            Movo talks to every parent, fills your classes, and grows your revenue - automatically.
+            Movo calls every parent, fills your classes, and grows your revenue - automatically.
           </p>
 
           <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3 sm:gap-4 justify-center px-4">
@@ -473,34 +477,34 @@ export default function Home() {
             </a>
             <button
               onClick={handleHeroAudioPlay}
-              className="group flex items-center justify-center gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-white/10 hover:bg-white/20 text-white text-sm sm:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[48px] min-w-[240px]"
+              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px] min-w-[200px] md:min-w-[240px]"
             >
-              <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0">
+              <div className="relative w-6 h-6 md:w-8 md:h-8 flex items-center justify-center flex-shrink-0">
                 {/* Animated waveform dots */}
                 {isHeroAudioPlaying ? (
                   <div className="flex items-center gap-1">
                     <div
                       className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "16px", animationDelay: "0ms" }}
+                      style={{ height: "12px", animationDelay: "0ms" }}
                     ></div>
                     <div
                       className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "24px", animationDelay: "150ms" }}
+                      style={{ height: "18px", animationDelay: "150ms" }}
                     ></div>
                     <div
                       className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "14px", animationDelay: "300ms" }}
+                      style={{ height: "10px", animationDelay: "300ms" }}
                     ></div>
                     <div
                       className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "20px", animationDelay: "100ms" }}
+                      style={{ height: "14px", animationDelay: "100ms" }}
                     ></div>
                   </div>
                 ) : (
-                  <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Play className="w-4 h-4 md:w-5 md:h-5" />
                 )}
               </div>
-              <span className="font-medium whitespace-nowrap">Hear how Movo sells</span>
+              <span className="font-medium whitespace-nowrap text-sm md:text-base">Hear how Movo sells</span>
             </button>
 
             <audio
@@ -560,38 +564,38 @@ export default function Home() {
                 <span className="block text-gray-400 italic">inside out.</span>
               </h2>
               <p className="text-lg text-gray-600 leading-relaxed mb-10">
-                Trains on your programs, prices, and families - then sells for you.
+                Trains on your programs, pricing, and families - then sells like your best rep.
               </p>
 
               <button
                 onClick={handleLearnVideoPlay}
-                className="group flex items-center gap-3 px-6 py-3 md:px-8 md:py-4 bg-gray-900 hover:bg-gray-800 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 mb-16 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[48px] md:min-h-[56px] w-full max-w-[260px] md:max-w-[320px] md:min-w-[320px] mx-auto md:mx-0"
+                className="group flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 mb-16 hover:shadow-2xl hover:scale-105 cursor-pointer w-auto max-w-fit"
               >
-                <div className="relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center flex-shrink-0">
+                <div className="relative w-5 h-5 md:w-6 md:h-6 flex items-center justify-center flex-shrink-0">
                   {isLearnVideoPlaying ? (
                     <div className="flex items-center gap-1">
                       <div
                         className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "20px", animationDelay: "0ms" }}
+                        style={{ height: "14px", animationDelay: "0ms" }}
                       ></div>
                       <div
                         className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "28px", animationDelay: "150ms" }}
+                        style={{ height: "20px", animationDelay: "150ms" }}
                       ></div>
                       <div
                         className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "16px", animationDelay: "300ms" }}
+                        style={{ height: "12px", animationDelay: "300ms" }}
                       ></div>
                       <div
                         className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "24px", animationDelay: "100ms" }}
+                        style={{ height: "16px", animationDelay: "100ms" }}
                       ></div>
                     </div>
                   ) : (
-                    <Play className="w-5 h-5" />
+                    <Play className="w-4 h-4 md:w-4 md:h-4" />
                   )}
                 </div>
-                <span className="font-medium whitespace-nowrap">See Movo learn in action</span>
+                <span className="font-medium whitespace-nowrap text-sm md:text-base">See Movo learn in action</span>
               </button>
               <audio
                 ref={learnVideoRef}
@@ -690,9 +694,9 @@ export default function Home() {
                       <div className="text-xs text-blue-600 mt-1">18 trials booked</div>
                     </div>
                     <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4">
-                      <div className="text-xs font-medium text-green-600 mb-1">Response Time</div>
-                      <div className="text-2xl font-bold text-green-900">2.4s</div>
-                      <div className="text-xs text-green-600 mt-1">Under 5s always</div>
+                      <div className="text-xs font-medium text-green-600 mb-1">Data Intelligence </div>
+                      <div className="text-2xl font-bold text-green-900">142</div>
+                      <div className="text-xs text-green-600 mt-1">new parent leads this month </div>
                     </div>
                   </div>
 
@@ -785,7 +789,7 @@ export default function Home() {
         <div className="max-w-[1400px] mx-auto px-8 md:px-16">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-7xl font-serif text-gray-900 mb-6 leading-tight">
-              What It Does,
+            Sales, Solved.
               <br />
               <span className="text-gray-400 italic">Automatically</span>
             </h2>
@@ -803,13 +807,14 @@ export default function Home() {
               </span>
               <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Capture every opportunity</span>
             </h3>
+
             <div className="grid md:grid-cols-2 gap-8">
               {/* Never Miss a Call */}
               <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 relative overflow-hidden">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse">
+                    <div className="absolute top-4 right-4 bg-green-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse w-[240px] justify-center">
                       <span>💰</span>
                       <span>+$2,300 booked this week</span>
                     </div>
@@ -818,20 +823,18 @@ export default function Home() {
                         <Phone className="w-10 h-10 text-white" />
                       </div>
                     </div>
-                    <div className="bg-gray-900 text-white text-center py-3 rounded-lg text-sm font-medium">
+                    <div className="bg-gray-900 text-white text-center py-3 rounded-lg text-base font-medium">
                       Handled by Movo
                     </div>
-                    <div className="mt-3 text-center text-xs font-semibold text-gray-700 bg-white/50 py-2 rounded-lg">
-                      247 calls answered this month
-                    </div>
+                    <div className="mt-4 text-center text-sm text-gray-600">247 calls answered this month</div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Never Miss a Call</h3>
+                <h4 className="text-2xl font-bold text-gray-900 mb-3">Never Miss a Call</h4>
                 <p className="text-gray-600 leading-relaxed mb-3">
                   Every parent gets answered instantly - even after hours. Movo never lets an opportunity go to
                   voicemail.
                 </p>
-                <p className="text-sm italic text-gray-500">"Peace of mind - no more lost signups."</p>
+                <p className="text-sm italic text-gray-500">"Peace of mind - no more lost signups" - Supreme Hoops</p>
               </div>
 
               {/* Re-Engage Old Leads */}
@@ -839,32 +842,31 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 space-y-4 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                      💬 47% conversion
+                    <div className="absolute top-4 right-4 bg-purple-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 w-[240px] justify-center">
+                      <span>💬</span>
+                      <span>47% conversion</span>
                     </div>
-                    <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-sm border border-purple-200 mt-6">
-                      <div className="text-xs text-gray-500 mb-1">Text from Movo:</div>
-                      <div className="text-sm font-medium text-gray-900">
+                    <div className="bg-white p-4 rounded-lg shadow-sm mt-6">
+                      <div className="text-xs text-gray-500 mb-2">Text from Movo:</div>
+                      <div className="text-sm font-medium text-gray-900 mb-3">
                         "Hey, we have one last spot for this week — want it?"
                       </div>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow animate-pulse">
-                        <span className="text-white text-sm">✓</span>
+                      <div className="flex items-center justify-center my-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow">
+                          <span className="text-white text-sm">✓</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-sm border border-green-200">
                       <div className="text-xs text-gray-500 mb-1">Parent replied:</div>
                       <div className="text-sm font-medium text-gray-900">"Yes! Book it please"</div>
-                      <div className="text-xs text-green-700 mt-1 font-semibold">✓ Reactivated Parent</div>
+                      <div className="text-xs text-green-700 font-semibold mt-2">✓ Reactivated Parent</div>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Re-Engage Old Leads</h3>
+                <h4 className="text-2xl font-bold text-gray-900 mb-3">Re-Engage Old Leads</h4>
                 <p className="text-gray-600 leading-relaxed mb-3">
                   Movo follows up automatically with families who asked months ago - and gets them to finally sign up.
                 </p>
-                <p className="text-sm italic text-gray-500">"Wow, it even remembers the ones I forgot."</p>
+                <p className="text-sm italic text-gray-500">"Wow, it even remembers the ones I forgot" - Haifa Swim </p>
               </div>
             </div>
           </div>
@@ -878,69 +880,68 @@ export default function Home() {
               </span>
               <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Turn calls into enrollments</span>
             </h3>
+
             <div className="grid md:grid-cols-2 gap-8">
               {/* Fill Every Program */}
               <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                      📈 +85% fill rate
+                    <div className="absolute top-4 right-4 bg-orange-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 w-[240px] justify-center">
+                      <span>📈</span>
+                      <span>+85% fill rate</span>
                     </div>
                     <div className="bg-white rounded-lg p-4 shadow-sm mt-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-semibold text-gray-900">Tues 5 PM Swim</div>
-                        <div className="text-xs font-bold text-green-700">FULL ✅</div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="font-semibold text-gray-900">Tues 5 PM Swim</div>
+                        <div className="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded">FULL ✅</div>
                       </div>
                       <div className="text-xs text-gray-600 mb-2">11/12 spots filled</div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
                         <div
-                          className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full shadow group-hover:scale-x-105 transition-transform origin-left"
+                          className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full shadow"
                           style={{ width: "92%" }}
                         ></div>
                       </div>
-                      <div className="mt-3 flex items-center justify-center">
-                        <div className="bg-green-100 text-green-800 text-xs font-bold px-4 py-1 rounded-full animate-pulse">
-                          Booked ✓
-                        </div>
+                      <div className="text-xs text-green-700 font-semibold bg-green-50 rounded px-2 py-1 text-center">
+                        Booked ✓
                       </div>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Fill Every Program</h3>
+                <h4 className="text-2xl font-bold text-gray-900 mb-3">Fill Every Program</h4>
                 <p className="text-gray-600 leading-relaxed mb-3">
                   Movo knows which classes have openings and actively promotes them to interested parents - until
                   they're full.
                 </p>
-                <p className="text-sm italic text-gray-500">"It actually sells my classes for me."</p>
+                <p className="text-sm italic text-gray-500">"It actually sells my classes for me" - MPAC Sports</p>
               </div>
 
               {/* Learn What Converts */}
               <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
-                  <div className="w-full bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 space-y-3 relative">
+                  <div className="w-full bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                      🧠 +72% lift
+                    <div className="absolute top-4 right-4 bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 w-[240px] justify-center">
+                      <span>🧠</span>
+                      <span>+72% lift</span>
                     </div>
-                    <div className="flex items-center justify-between pb-3 border-b border-indigo-200 mt-6">
-                      <span className="text-xs font-semibold text-gray-700">Top Converting Offer</span>
-                    </div>
-                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform">
-                      <div className="text-lg font-bold text-gray-900">"Free Trial"</div>
-                      <div className="text-xs text-green-700 font-medium">Converts 72% better</div>
-                    </div>
-                    <div className="text-xs text-center text-gray-600 italic bg-white/50 py-2 rounded-lg">
-                      Discovers best offers automatically
+                    <div className="bg-white rounded-lg p-4 shadow-sm mt-6">
+                      <div className="text-xs font-semibold text-gray-500 mb-2">Top Converting Offer</div>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">"Free Trial"</div>
+                      <div className="text-sm text-green-700 font-medium">Converts 72% better</div>
+                      <div className="text-xs text-gray-500 mt-3 italic">Discovers best offers automatically</div>
                     </div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Learn What Converts</h3>
+                <h4 className="text-2xl font-bold text-gray-900 mb-3">Learn What Converts</h4>
                 <p className="text-gray-600 leading-relaxed mb-3">
                   Movo analyzes every conversation and learns what words close more trials - constantly improving
                   performance.
                 </p>
-                <p className="text-sm italic text-gray-500">"It gets better - I don't have to micromanage."</p>
+                <p className="text-sm italic text-gray-500">
+                  "It gets better - I don't have to micromanage" - Haifa Swim
+                </p>
               </div>
             </div>
           </div>
@@ -961,7 +962,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                    <div className="absolute top-4 right-4 bg-teal-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
                       ⚙️ 10+ hours saved weekly
                     </div>
                     <div className="grid grid-cols-3 gap-3 mt-6">
@@ -1026,7 +1027,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={handleHeroAudioPlay}
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px] min-w-[280px]"
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
                 >
                   <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
                     {isHeroAudioPlaying ? (
@@ -1058,7 +1059,7 @@ export default function Home() {
                   href="https://calendly.com/ari-movoai/30min"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px] min-w-[200px]"
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
                 >
                   Book a Demo
                 </a>
@@ -1142,19 +1143,8 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-24 bg-white border-t border-gray-200">
         <div className="mx-auto max-w-7xl px-10">
-          <div className="text-center mb-8">
-            <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Movo AI automates communications and may use AI-generated voice or text responses. Conversations may be
-              recorded or analyzed to improve service quality, consistent with our{" "}
-              <a href="/privacy" className="text-gray-900 underline hover:text-gray-700 transition-colors">
-                Privacy Policy
-              </a>
-              .
-            </p>
-          </div>
-          {/* </CHANGE> */}
-
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          {/* Moved disclaimer to bottom, copyright and links first */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
             <p className="text-gray-600">© 2025 Movo AI, Inc. All rights reserved.</p>
             <div className="flex items-center gap-8">
               <a href="/portal/login" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
@@ -1167,6 +1157,17 @@ export default function Home() {
                 Privacy
               </a>
             </div>
+          </div>
+
+          <div className="text-center pt-8 border-t border-gray-200">
+            <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
+              Movo AI automates communications and may use AI-generated voice or text responses. Conversations may be
+              recorded or analyzed to improve service quality, consistent with our{" "}
+              <a href="/privacy" className="text-gray-900 underline hover:text-gray-700 transition-colors">
+                Privacy Policy
+              </a>
+              .
+            </p>
           </div>
         </div>
       </footer>

@@ -8,9 +8,10 @@ const caseStudies = [
   {
     company: "Supreme Hoops Basketball Academy",
     logo: "/supreme-hoops-logo.png",
-    headline: "Clinic campaigns now sell themselves.",
+    headline: "Veterans Day clinics sold out - automatically.",
     quote:
-      "Before Movo, we missed dozens of clinic calls each week. Now every parent gets a reply instantly — even after hours. Movo runs our clinic campaigns, sends personalized emails and texts, and even closes payments. It's like having a sales team that never clocks out.",
+      "We launched a promotion and Movo handled everything. It called hundreds of old leads, re-engaged parents who hadn’t converted, and booked out every available trial. Parents loved how personal it felt — they thought they were speaking with our staff. Now we’re planning to run every campaign through Movo."
+,
     stats: [
       { value: "+$7,800", label: "new revenue in 30 days" },
       { value: "+61%", label: "trial sign-ups" },
