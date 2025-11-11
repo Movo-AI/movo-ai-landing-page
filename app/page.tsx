@@ -67,6 +67,9 @@ export default function Home() {
   const [currentProofIndex, setCurrentProofIndex] = useState(0)
 
   const [callMeForm, setCallMeForm] = useState({ name: "", email: "", phone: "", newsletter: true })
+  const [isSubmittingCall, setIsSubmittingCall] = useState(false)
+  const [callError, setCallError] = useState<string | null>(null)
+  const [callSuccess, setCallSuccess] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -251,13 +254,51 @@ export default function Home() {
     // Handle demo submission logic
   }
 
-  const handleCallMeSubmit = (e: React.FormEvent) => {
+  const handleCallMeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Call Me form submitted:", callMeForm)
-    // Here you would typically send this to your backend
-    setShowCallMe(false)
-    // Reset form
-    setCallMeForm({ name: "", email: "", phone: "", newsletter: true })
+    console.log("🚀 handleCallMeSubmit called - NEW VERSION")
+    setCallError(null)
+    setCallSuccess(false)
+    setIsSubmittingCall(true)
+
+    console.log("Submitting call request:", { name: callMeForm.name, email: callMeForm.email, phone: callMeForm.phone })
+
+    try {
+      const response = await fetch("/api/create-call", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: callMeForm.name,
+          email: callMeForm.email,
+          phone: callMeForm.phone,
+        }),
+      })
+
+      console.log("API response status:", response.status)
+
+      const data = await response.json()
+      console.log("API response data:", data)
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to initiate call")
+      }
+
+      setCallSuccess(true)
+      console.log("Call initiated successfully, callId:", data.callId)
+      // Reset form after a short delay
+      setTimeout(() => {
+        setShowCallMe(false)
+        setCallMeForm({ name: "", email: "", phone: "", newsletter: true })
+        setCallSuccess(false)
+      }, 2000)
+    } catch (error) {
+      console.error("Error submitting call request:", error)
+      setCallError(error instanceof Error ? error.message : "Failed to initiate call. Please try again.")
+    } finally {
+      setIsSubmittingCall(false)
+    }
   }
 
   useEffect(() => {
@@ -1297,6 +1338,24 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleCallMeSubmit} className="space-y-4">
+              {callError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {callError}
+                </div>
+              )}
+
+              {callSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                  ✅ Call initiated! Movo will call you shortly.
+                </div>
+              )}
+
+              {isSubmittingCall && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
+                  ⏳ Initiating call...
+                </div>
+              )}
+
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Name
@@ -1307,8 +1366,9 @@ export default function Home() {
                   placeholder="Jane Smith"
                   value={callMeForm.name}
                   onChange={(e) => setCallMeForm({ ...callMeForm, name: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={isSubmittingCall}
                 />
               </div>
 
@@ -1322,8 +1382,9 @@ export default function Home() {
                   placeholder="jane@framer.com"
                   value={callMeForm.email}
                   onChange={(e) => setCallMeForm({ ...callMeForm, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={isSubmittingCall}
                 />
               </div>
 
@@ -1337,8 +1398,9 @@ export default function Home() {
                   placeholder="000-000-0000"
                   value={callMeForm.phone}
                   onChange={(e) => setCallMeForm({ ...callMeForm, phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={isSubmittingCall}
                 />
               </div>
 
@@ -1348,7 +1410,8 @@ export default function Home() {
                   type="checkbox"
                   checked={callMeForm.newsletter}
                   onChange={(e) => setCallMeForm({ ...callMeForm, newsletter: e.target.checked })}
-                  className="mt-1 w-5 h-5 text-teal-600 border-gray-300 rounded focus:ring-2 focus:ring-teal-500/20"
+                  className="mt-1 w-5 h-5 text-teal-600 border-gray-300 rounded focus:ring-2 focus:ring-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmittingCall}
                 />
                 <label htmlFor="newsletter" className="text-sm text-gray-600 leading-relaxed cursor-pointer">
                   I agree to get a call from Movo
@@ -1373,9 +1436,36 @@ export default function Home() {
 
               <button
                 type="submit"
-                className="w-full px-6 py-4 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-xl cursor-pointer"
+                disabled={isSubmittingCall}
+                className="w-full px-6 py-4 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Call me
+                {isSubmittingCall ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Initiating call...
+                  </>
+                ) : (
+                  "Call me"
+                )}
               </button>
             </form>
           </div>
