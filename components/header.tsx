@@ -7,6 +7,21 @@ import { useState } from "react"
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      const headerOffset = 80 // Height of fixed header
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      })
+    }
+    setMobileMenuOpen(false)
+  }
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-[1600px] mx-auto flex h-20 items-center justify-between px-6 md:px-8 lg:px-16">
@@ -20,15 +35,24 @@ export function Header() {
         </a>
 
         <nav className="hidden md:flex items-center gap-10">
-          <a href="#product" className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors">
+          <button
+            onClick={() => scrollToSection("product")}
+            className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          >
             Product
-          </a>
-          <a href="#solution" className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors">
+          </button>
+          <button
+            onClick={() => scrollToSection("solution")}
+            className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          >
             Solution
-          </a>
-          <a href="#success" className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors">
+          </button>
+          <button
+            onClick={() => scrollToSection("success")}
+            className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          >
             Success
-          </a>
+          </button>
         </nav>
 
         <a
@@ -59,27 +83,24 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
           <nav className="flex flex-col px-6 py-4">
-            <a
-              href="#product"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100"
+            <button
+              onClick={() => scrollToSection("product")}
+              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100 text-left"
             >
               Product
-            </a>
-            <a
-              href="#solution"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100"
+            </button>
+            <button
+              onClick={() => scrollToSection("solution")}
+              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100 text-left"
             >
               Solution
-            </a>
-            <a
-              href="#success"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100"
+            </button>
+            <button
+              onClick={() => scrollToSection("success")}
+              className="py-3 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors border-b border-gray-100 text-left"
             >
               Success
-            </a>
+            </button>
             <a
               href="https://calendly.com/ari-movoai/30min"
               target="_blank"

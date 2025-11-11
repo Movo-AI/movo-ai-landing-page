@@ -656,131 +656,122 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-blue-50/40 to-white/50" />
 
             <div className="relative z-10 w-full max-w-2xl">
-              {/* Premium Dashboard Interface - Compact Frame */}
-              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200/50 backdrop-blur-sm hover:shadow-3xl transition-shadow duration-500">
-                {/* Dashboard Header */}
-                <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+                {/* Header - Clean minimal style like reference */}
+                <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">M</span>
+                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold">M</span>
                       </div>
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-900">Movo Intelligence</h3>
-                        <p className="text-xs text-gray-500">Real-time academy insights</p>
+                        <h3 className="text-base font-semibold text-gray-900">Movo Intelligence</h3>
+                        <p className="text-sm text-gray-500">Real-time academy insights</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-green-700">Live</span>
-                      </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 rounded-md border border-green-200">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <span className="text-xs font-medium text-green-700">Live</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Dashboard Content */}
+                {/* Content - Clean layout matching analytics reference */}
                 <div className="p-6 space-y-6">
-                  {/* Stats Row */}
+                  {/* Stats Row - Clean table-like layout */}
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4">
-                      <div className="text-xs font-medium text-purple-600 mb-1">This Week</div>
-                      <div className="text-2xl font-bold text-purple-900">$7,840</div>
-                      <div className="text-xs text-purple-600 mt-1">↑ 23% from last week</div>
+                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                      <div className="text-xs font-semibold text-purple-700 mb-1 uppercase tracking-wide">
+                        This Week
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900 mb-0.5">$7,840</div>
+                      <div className="flex items-center gap-1 text-xs text-purple-600">
+                        <span>↑</span> <span>23% from last week</span>
+                      </div>
                     </div>
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-4">
-                      <div className="text-xs font-medium text-blue-600 mb-1">Conversations</div>
-                      <div className="text-2xl font-bold text-blue-900">47</div>
-                      <div className="text-xs text-blue-600 mt-1">18 trials booked</div>
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                      <div className="text-xs font-semibold text-blue-700 mb-1 uppercase tracking-wide">
+                        Conversations
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900 mb-0.5">47</div>
+                      <div className="text-xs text-blue-600">18 trials booked</div>
                     </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4">
-                      <div className="text-xs font-medium text-green-600 mb-1">Data Intelligence </div>
-                      <div className="text-2xl font-bold text-green-900">142</div>
-                      <div className="text-xs text-green-600 mt-1">new parent leads this month </div>
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                      <div className="text-xs font-semibold text-green-700 mb-1 uppercase tracking-wide">
+                        Data Intelligence
+                      </div>
+                      <div className="text-2xl font-bold text-green-900 mb-0.5">142</div>
+                      <div className="text-xs text-green-600">new parent leads this month</div>
                     </div>
                   </div>
 
-                  {/* Recent Activity Feed */}
+                  {/* Activity Feed - Clean list style from reference */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-gray-900">Recent Activity</h4>
-                      <span className="text-xs text-gray-500">Last 30 minutes</span>
+                      <span className="text-xs text-gray-400">Last 30 minutes</span>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {/* Activity Item 1 */}
-                      <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-green-50 to-transparent rounded-lg border border-green-100">
-                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-xs">✓</span>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div className="w-9 h-9 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-sm font-semibold">✓</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">Emma's family booked trial</p>
-                            </div>
-                            <span className="text-xs font-semibold text-green-600 flex-shrink-0">+$160</span>
-                          </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Emma's family booked trial</p>
                         </div>
+                        <span className="text-sm font-semibold text-green-600">+$160</span>
                       </div>
 
                       {/* Activity Item 2 */}
-                      <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-blue-50 to-transparent rounded-lg border border-blue-100">
-                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-xs">💬</span>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-sm">💬</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">Mike's mom asked about pricing</p>
-                            </div>
-                            <span className="text-xs text-blue-600 flex-shrink-0">2m ago</span>
-                          </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Mike's mom asked about pricing</p>
                         </div>
+                        <span className="text-sm text-blue-600">2m ago</span>
                       </div>
 
                       {/* Activity Item 3 */}
-                      <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-purple-50 to-transparent rounded-lg border border-purple-100">
-                        <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-xs">🔄</span>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div className="w-9 h-9 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-sm">🔄</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">Re-engaged Sarah Martinez</p>
-                            </div>
-                            <span className="text-xs text-purple-600 flex-shrink-0">5m ago</span>
-                          </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Re-engaged Sarah Martinez</p>
                         </div>
+                        <span className="text-sm text-purple-600">5m ago</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Connected Systems */}
+                  {/* Connected Systems - Clean badge grid from integrations reference */}
                   <div>
                     <h4 className="text-sm font-semibold text-gray-900 mb-3">Connected Systems</h4>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-medium text-gray-700">iClassPro</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">iClassPro</span>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-medium text-gray-700">Stripe</span>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">Stripe</span>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-medium text-gray-700">Google Calendar</span>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">Google Calendar</span>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-medium text-gray-700">Mindbody</span>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">Mindbody</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Caption below dashboard */}
-              <div className="text-center mt-8"></div>
+              {/* </CHANGE> */}
             </div>
           </div>
         </div>
@@ -789,7 +780,7 @@ export default function Home() {
         <div className="max-w-[1400px] mx-auto px-8 md:px-16">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-7xl font-serif text-gray-900 mb-6 leading-tight">
-            Sales, Solved.
+              Sales, Solved.
               <br />
               <span className="text-gray-400 italic">Automatically</span>
             </h2>
@@ -810,63 +801,71 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-8">
               {/* Never Miss a Call */}
-              <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
+              <div className="bg-white rounded-2xl p-6 md:p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
-                  <div className="w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 relative overflow-hidden">
+                  <div className="w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 md:p-6 relative overflow-hidden">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-green-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse w-[240px] justify-center">
-                      <span>💰</span>
-                      <span>+$2,300 booked this week</span>
+                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-green-500 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 animate-pulse w-auto md:w-[240px] justify-center whitespace-nowrap">
+                      <span className="text-xs md:text-sm">💰</span>
+                      <span>+$2,300 booked</span>
                     </div>
-                    <div className="flex items-center justify-center mb-4 mt-6">
-                      <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                        <Phone className="w-10 h-10 text-white" />
+                    <div className="flex items-center justify-center mb-3 md:mb-4 mt-8 md:mt-6">
+                      <div className="w-16 md:w-20 h-16 md:h-20 bg-gray-900 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <Phone className="w-8 md:w-10 h-8 md:h-10 text-white" />
                       </div>
                     </div>
-                    <div className="bg-gray-900 text-white text-center py-3 rounded-lg text-base font-medium">
+                    <div className="bg-gray-900 text-white text-center py-2.5 md:py-3 rounded-lg text-sm md:text-base font-medium">
                       Handled by Movo
                     </div>
-                    <div className="mt-4 text-center text-sm text-gray-600">247 calls answered this month</div>
+                    <div className="mt-3 md:mt-4 text-center text-xs md:text-sm text-gray-600">
+                      247 calls answered this month
+                    </div>
                   </div>
                 </div>
-                <h4 className="text-2xl font-bold text-gray-900 mb-3">Never Miss a Call</h4>
-                <p className="text-gray-600 leading-relaxed mb-3">
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Never Miss a Call</h4>
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
                   Every parent gets answered instantly - even after hours. Movo never lets an opportunity go to
                   voicemail.
                 </p>
-                <p className="text-sm italic text-gray-500">"Peace of mind - no more lost signups" - Supreme Hoops</p>
+                <p className="text-xs md:text-sm italic text-gray-500">
+                  "Peace of mind - no more lost signups" - Supreme Hoops
+                </p>
               </div>
 
               {/* Re-Engage Old Leads */}
-              <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
+              <div className="bg-white rounded-2xl p-6 md:p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
-                  <div className="w-full bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 space-y-4 relative">
+                  <div className="w-full bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 md:p-6 space-y-4 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-purple-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 w-[240px] justify-center">
-                      <span>💬</span>
+                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-purple-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
+                      <span className="text-xs md:text-sm">💬</span>
                       <span>47% conversion</span>
                     </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm mt-6">
-                      <div className="text-xs text-gray-500 mb-2">Text from Movo:</div>
-                      <div className="text-sm font-medium text-gray-900 mb-3">
+                    <div className="bg-white p-3 md:p-4 rounded-lg shadow-sm mt-8 md:mt-6">
+                      <div className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">Text from Movo:</div>
+                      <div className="text-xs md:text-sm font-medium text-gray-900 mb-2 md:mb-3">
                         "Hey, we have one last spot for this week — want it?"
                       </div>
-                      <div className="flex items-center justify-center my-3">
-                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow">
-                          <span className="text-white text-sm">✓</span>
+                      <div className="flex items-center justify-center my-2 md:my-3">
+                        <div className="w-7 md:w-8 h-7 md:h-8 bg-green-500 rounded-full flex items-center justify-center shadow">
+                          <span className="text-white text-xs md:text-sm">✓</span>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 mb-1">Parent replied:</div>
-                      <div className="text-sm font-medium text-gray-900">"Yes! Book it please"</div>
-                      <div className="text-xs text-green-700 font-semibold mt-2">✓ Reactivated Parent</div>
+                      <div className="text-[10px] md:text-xs text-gray-500 mb-1">Parent replied:</div>
+                      <div className="text-xs md:text-sm font-medium text-gray-900">"Yes! Book it please"</div>
+                      <div className="text-[10px] md:text-xs text-green-700 font-semibold mt-1.5 md:mt-2">
+                        ✓ Reactivated Parent
+                      </div>
                     </div>
                   </div>
                 </div>
-                <h4 className="text-2xl font-bold text-gray-900 mb-3">Re-Engage Old Leads</h4>
-                <p className="text-gray-600 leading-relaxed mb-3">
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Re-Engage Old Leads</h4>
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
                   Movo follows up automatically with families who asked months ago - and gets them to finally sign up.
                 </p>
-                <p className="text-sm italic text-gray-500">"Wow, it even remembers the ones I forgot" - Haifa Swim </p>
+                <p className="text-xs md:text-sm italic text-gray-500">
+                  "Wow, it even remembers the ones I forgot" - Haifa Swim{" "}
+                </p>
               </div>
             </div>
           </div>
@@ -883,63 +882,71 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-8">
               {/* Fill Every Program */}
-              <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
+              <div className="bg-white rounded-2xl p-6 md:p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
-                  <div className="w-full bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 relative">
+                  <div className="w-full bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-orange-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 w-[240px] justify-center">
-                      <span>📈</span>
+                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-orange-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
+                      <span className="text-xs md:text-sm">📈</span>
                       <span>+85% fill rate</span>
                     </div>
-                    <div className="bg-white rounded-lg p-4 shadow-sm mt-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="font-semibold text-gray-900">Tues 5 PM Swim</div>
-                        <div className="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded">FULL ✅</div>
+                    <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
+                      <div className="flex items-center justify-between mb-2 md:mb-3">
+                        <div className="text-sm md:text-base font-semibold text-gray-900">Tues 5 PM Swim</div>
+                        <div className="text-[10px] md:text-xs font-bold text-green-700 bg-green-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
+                          FULL ✅
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-600 mb-2">11/12 spots filled</div>
-                      <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
+                      <div className="text-[10px] md:text-xs text-gray-600 mb-1.5 md:mb-2">11/12 spots filled</div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5 md:h-3 mb-1.5 md:mb-2">
                         <div
-                          className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full shadow"
+                          className="bg-gradient-to-r from-green-500 to-green-600 h-2.5 md:h-3 rounded-full shadow"
                           style={{ width: "92%" }}
                         ></div>
                       </div>
-                      <div className="text-xs text-green-700 font-semibold bg-green-50 rounded px-2 py-1 text-center">
+                      <div className="text-[10px] md:text-xs text-green-700 font-semibold bg-green-50 rounded px-2 py-1 text-center">
                         Booked ✓
                       </div>
                     </div>
                   </div>
                 </div>
-                <h4 className="text-2xl font-bold text-gray-900 mb-3">Fill Every Program</h4>
-                <p className="text-gray-600 leading-relaxed mb-3">
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Fill Every Program</h4>
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
                   Movo knows which classes have openings and actively promotes them to interested parents - until
                   they're full.
                 </p>
-                <p className="text-sm italic text-gray-500">"It actually sells my classes for me" - MPAC Sports</p>
+                <p className="text-xs md:text-sm italic text-gray-500">
+                  "It actually sells my classes for me" - MPAC Sports
+                </p>
               </div>
 
               {/* Learn What Converts */}
-              <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
+              <div className="bg-white rounded-2xl p-6 md:p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
-                  <div className="w-full bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 relative">
+                  <div className="w-full bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 w-[240px] justify-center">
-                      <span>🧠</span>
+                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-indigo-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
+                      <span className="text-xs md:text-sm">🧠</span>
                       <span>+72% lift</span>
                     </div>
-                    <div className="bg-white rounded-lg p-4 shadow-sm mt-6">
-                      <div className="text-xs font-semibold text-gray-500 mb-2">Top Converting Offer</div>
-                      <div className="text-2xl font-bold text-gray-900 mb-1">"Free Trial"</div>
-                      <div className="text-sm text-green-700 font-medium">Converts 72% better</div>
-                      <div className="text-xs text-gray-500 mt-3 italic">Discovers best offers automatically</div>
+                    <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
+                      <div className="text-[10px] md:text-xs font-semibold text-gray-500 mb-1.5 md:mb-2">
+                        Top Converting Offer
+                      </div>
+                      <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">"Free Trial"</div>
+                      <div className="text-xs md:text-sm text-green-700 font-medium">Converts 72% better</div>
+                      <div className="text-[10px] md:text-xs text-gray-500 mt-2 md:mt-3 italic">
+                        Discovers best offers automatically
+                      </div>
                     </div>
                   </div>
                 </div>
-                <h4 className="text-2xl font-bold text-gray-900 mb-3">Learn What Converts</h4>
-                <p className="text-gray-600 leading-relaxed mb-3">
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Learn What Converts</h4>
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
                   Movo analyzes every conversation and learns what words close more trials - constantly improving
                   performance.
                 </p>
-                <p className="text-sm italic text-gray-500">
+                <p className="text-xs md:text-sm italic text-gray-500">
                   "It gets better - I don't have to micromanage" - Haifa Swim
                 </p>
               </div>
@@ -958,41 +965,45 @@ export default function Home() {
             {/* Centered the single card using mx-auto */}
             <div className="max-w-2xl mx-auto">
               {/* Everything, Automatically */}
-              <div className="bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
+              <div className="bg-white rounded-2xl p-6 md:p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 group">
                 <div className="mb-6">
-                  <div className="w-full bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-6 relative">
+                  <div className="w-full bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-4 right-4 bg-teal-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-                      ⚙️ 10+ hours saved weekly
+                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-teal-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
+                      ⚙️ 10+ hrs saved
                     </div>
-                    <div className="grid grid-cols-3 gap-3 mt-6">
-                      <div className="bg-white p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform">
-                        <div className="text-2xl mb-1">💳</div>
-                        <div className="text-xs font-semibold text-gray-700">Payments</div>
+                    <div className="grid grid-cols-3 gap-2 md:gap-3 mt-8 md:mt-6">
+                      <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform">
+                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">💳</div>
+                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">Payments</div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform delay-75">
-                        <div className="text-2xl mb-1">📅</div>
-                        <div className="text-xs font-semibold text-gray-700">Scheduling</div>
+                      <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform delay-75">
+                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">📅</div>
+                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">Scheduling</div>
                       </div>
-                      <div className="bg-white p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform delay-150">
-                        <div className="text-2xl mb-1">📧</div>
-                        <div className="text-xs font-semibold text-gray-700">Follow-ups</div>
+                      <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform delay-150">
+                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">📧</div>
+                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">Follow-ups</div>
                       </div>
                     </div>
-                    <div className="mt-4 text-center">
-                      <div className="bg-white/80 backdrop-blur-sm text-teal-800 text-xs font-bold px-4 py-2 rounded-full inline-block">
+                    <div className="mt-3 md:mt-4 text-center">
+                      <div className="bg-white/80 backdrop-blur-sm text-teal-800 text-[10px] md:text-xs font-bold px-3 md:px-4 py-1.5 md:py-2 rounded-full inline-block">
                         All synced automatically
                       </div>
                     </div>
                   </div>
                 </div>
                 {/* Centered the description text */}
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 text-center">Everything, Automatically</h3>
-                <p className="text-gray-600 leading-relaxed mb-3 text-center">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3 text-center">
+                  Everything, Automatically
+                </h3>
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3 text-center">
                   Movo syncs payments, follow-ups, and schedules - so your team can focus on coaching, not chasing
                   parents.
                 </p>
-                <p className="text-sm italic text-gray-500 text-center">"Freedom - I can finally breathe."</p>
+                <p className="text-xs md:text-sm italic text-gray-500 text-center">
+                  "Freedom - I can finally breathe."
+                </p>
               </div>
             </div>
           </div>
@@ -1067,33 +1078,33 @@ export default function Home() {
             </div>
 
             {/* Right - Horizontal stats with static numbers */}
-            <div className="flex flex-col sm:flex-row gap-12 sm:gap-16 justify-center">
+            <div className="flex flex-col gap-8 sm:flex-row sm:gap-12 md:gap-16 justify-center">
               {/* Stat 1 - Response time */}
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-6xl md:text-7xl font-bold text-gray-900 mb-2">
+                <div className="flex items-center justify-center gap-2 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
                   <span>{"<"}5s</span>
                 </div>
-                <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">
+                <div className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide px-4">
                   Average response time
                 </div>
               </div>
 
               {/* Stat 2 - Conversions */}
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-6xl md:text-7xl font-bold text-gray-900 mb-2">
+                <div className="flex items-center justify-center gap-2 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
                   <span>+47%</span>
                 </div>
-                <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">
+                <div className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide px-4">
                   More conversions
                 </div>
               </div>
 
               {/* Stat 3 - Revenue */}
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-6xl md:text-7xl font-bold text-gray-900 mb-2">
+                <div className="flex items-center justify-center gap-2 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
                   <span>+$4.2K</span>
                 </div>
-                <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">
+                <div className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide px-4">
                   New monthly revenue
                 </div>
               </div>
@@ -1184,7 +1195,7 @@ export default function Home() {
             <div className="flex flex-col items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Get a Call from Movo</h2>
               <p className="text-gray-600 text-center leading-relaxed">
-                Fill your info and get a call from Movo. One call is all it takes to see why academies trust Movo.
+                Fill in your info - Movo will call you instantly. See how it sells.
               </p>
             </div>
 
@@ -1248,7 +1259,7 @@ export default function Home() {
               </div>
 
               <div className="pt-2 pb-2">
-                <p className="text-xs text-gray-500 leading-relaxed">
+                <p className="text-xs text-gray-500 leading-relaxed font-thin">
                   By submitting your phone number above, you consent to the{" "}
                   <a href="#" className="text-gray-700 underline hover:text-gray-900">
                     Mobile Terms

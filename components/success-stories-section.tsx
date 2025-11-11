@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 
 const caseStudies = [
@@ -10,8 +9,7 @@ const caseStudies = [
     logo: "/supreme-hoops-logo.png",
     headline: "Veterans Day clinics sold out - automatically.",
     quote:
-      "We launched a promotion and Movo handled everything. It called hundreds of old leads, re-engaged parents who hadn’t converted, and booked out every available trial. Parents loved how personal it felt — they thought they were speaking with our staff. Now we’re planning to run every campaign through Movo."
-,
+      "We launched a promotion and Movo handled everything. It called hundreds of old leads, re-engaged parents who hadn’t converted, and booked out every available trial. Parents loved how personal it felt — they thought they were speaking with our staff. Now we’re planning to run every campaign through Movo.",
     stats: [
       { value: "+$7,800", label: "new revenue in 30 days" },
       { value: "+61%", label: "trial sign-ups" },
@@ -67,10 +65,7 @@ export function SuccessStoriesSection() {
                 and recurring revenue.
               </p>
             </div>
-            <div className="flex items-center gap-4 flex-shrink-0">
-              
-              
-            </div>
+            <div className="flex items-center gap-4 flex-shrink-0"></div>
           </div>
         </div>
 
@@ -105,11 +100,11 @@ export function SuccessStoriesSection() {
                   "{caseStudy.quote}"
                 </blockquote>
 
-                <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-300">
+                <div className="flex flex-col gap-6 sm:grid sm:grid-cols-3 sm:gap-4 pt-6 border-t border-gray-300">
                   {caseStudy.stats.map((stat, idx) => (
-                    <div key={idx} className="text-center">
-                      <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                      <div className="text-xs text-gray-600 leading-tight">{stat.label}</div>
+                    <div key={idx} className="text-center py-2 sm:py-0">
+                      <div className="text-3xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">{stat.value}</div>
+                      <div className="text-sm sm:text-xs text-gray-600 leading-tight px-2">{stat.label}</div>
                     </div>
                   ))}
                 </div>
@@ -119,11 +114,7 @@ export function SuccessStoriesSection() {
         </div>
 
         {/* Pagination dots */}
-        <div className="flex items-center justify-center gap-2 mt-12">
-          {caseStudies.map((_, index) => (
-            null
-          ))}
-        </div>
+        <div className="flex items-center justify-center gap-2 mt-12">{caseStudies.map((_, index) => null)}</div>
 
         <div className="text-center mt-8">
           <p className="text-lg text-gray-600 italic">
