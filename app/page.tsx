@@ -639,7 +639,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm"
               >
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs font-semibold text-green-700">30% better conversion with Movo</span>
+                <span className="text-xs font-semibold text-green-700">30% higher conversion with Movo</span>
               </div>
 
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight text-gray-900 mb-4">
