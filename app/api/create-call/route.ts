@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 function normalizePhoneNumber(phone: string): string {
-  let cleaned = phone.replace(/[^\d+]/g, "")
+  const cleaned = phone.replace(/[^\d+]/g, "")
 
   if (cleaned.startsWith("+")) {
     return cleaned
@@ -64,10 +64,7 @@ export async function POST(request: NextRequest) {
     const { name, email, phone } = body
 
     if (!name || !email || !phone) {
-      return NextResponse.json(
-        { error: "Name, email, and phone are required" },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: "Name, email, and phone are required" }, { status: 400 })
     }
 
     const normalizedPhone = normalizePhoneNumber(phone)
@@ -76,12 +73,9 @@ export async function POST(request: NextRequest) {
     const firstName = nameParts[0] || ""
     const lastName = nameParts.slice(1).join(" ") || ""
 
-    const vapiApiKey = process.env.VAPI_API_KEY || process.env.NEXT_PUBLIC_VAPI_API_KEY
+    const vapiApiKey = process.env.VAPI_API_KEY
     if (!vapiApiKey) {
-      return NextResponse.json(
-        { error: "Server configuration error: VAPI_API_KEY not set" },
-        { status: 500 },
-      )
+      return NextResponse.json({ error: "Server configuration error: VAPI_API_KEY not set" }, { status: 500 })
     }
 
     const vapiRequest = {
@@ -119,9 +113,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, callId: data.id }, { status: 200 })
   } catch (error) {
     console.error("[API] Error creating call:", error)
-    return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again later." },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "An unexpected error occurred. Please try again later." }, { status: 500 })
   }
 }

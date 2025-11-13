@@ -22,12 +22,10 @@ export default function Home() {
   const [isHeroAudioPlaying, setIsHeroAudioPlaying] = useState(false)
   const [isLearnVideoPlaying, setIsLearnVideoPlaying] = useState(false)
 
-  const trackClick = (
-    elementType: string,
-    elementText: string,
-    section: string,
-    metadata?: Record<string, any>,
-  ) => {
+  const [isCallConnecting, setIsCallConnecting] = useState(false)
+  const [isCallActive, setIsCallActive] = useState(false)
+
+  const trackClick = (elementType: string, elementText: string, section: string, metadata?: Record<string, any>) => {
     posthog.capture("button_click", {
       element_type: elementType,
       element_text: elementText,
@@ -275,6 +273,7 @@ export default function Home() {
     setCallError(null)
     setCallSuccess(false)
     setIsSubmittingCall(true)
+    setIsCallConnecting(true)
 
     try {
       const response = await fetch("/api/create-call", {
@@ -296,6 +295,10 @@ export default function Home() {
       }
 
       setCallSuccess(true)
+      setIsCallActive(true)
+      setIsCallConnecting(false)
+
+      setShowCallMe(false)
 
       const emailDomain = callMeForm.email.split("@")[1] || "unknown"
       let phoneCountryCode = "+1"
@@ -337,14 +340,14 @@ export default function Home() {
       })
 
       setTimeout(() => {
-        setShowCallMe(false)
+        setIsCallActive(false)
         setCallMeForm({ name: "", email: "", phone: "", newsletter: true })
         setCallSuccess(false)
-      }, 2000)
+      }, 30000) // 30 seconds
     } catch (error) {
-      setCallError(
-        error instanceof Error ? error.message : "Failed to initiate call. Please try again.",
-      )
+      setCallError(error instanceof Error ? error.message : "Failed to initiate call. Please try again.")
+      setIsCallConnecting(false)
+      setIsCallActive(false)
     } finally {
       setIsSubmittingCall(false)
     }
@@ -618,8 +621,7 @@ export default function Home() {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage:
-              "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%209%202025%20%283%29-8bYxHxAQ0hnWrqQq3P4GKmM3DkXslx.png)",
+            backgroundImage: "url(/images/kids-20playing-20sport-20graphic-20nov-209-202025-20-283-29.png)",
           }}
         />
 
@@ -639,6 +641,19 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <button
+              onClick={() => {
+                trackClick("button", "Speak to Movo", "hero", {
+                  action: "open_call_modal",
+                  cta_type: "primary",
+                })
+                setShowCallMe(true)
+              }}
+              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[48px]"
+            >
+              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+              Speak to Movo
+            </button>
             <a
               href="https://calendly.com/ari-movoai/30min"
               target="_blank"
@@ -646,57 +661,15 @@ export default function Home() {
               onClick={() =>
                 trackClick("link", "Book a demo", "hero", {
                   url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "primary",
+                  cta_type: "secondary",
                 })
               }
-              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[48px]"
+              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
             >
-              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-              Book a demo
+              <span className="font-medium whitespace-nowrap text-sm md:text-base">Book a demo</span>
             </a>
-            <button
-              onClick={() => {
-                trackClick("button", "Listen to Movo sell", "hero", {
-                  action: isHeroAudioPlaying ? "pause" : "play",
-                  media_type: "audio",
-                })
-                handleHeroAudioPlay()
-              }}
-              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px] min-w-[200px] md:min-w-[240px]"
-            >
-              <div className="relative w-6 h-6 md:w-8 md:h-8 flex items-center justify-center flex-shrink-0">
-                {/* Animated waveform dots */}
-                {isHeroAudioPlaying ? (
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "12px", animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "18px", animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "10px", animationDelay: "300ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "14px", animationDelay: "100ms" }}
-                    ></div>
-                  </div>
-                ) : (
-                  <Play className="w-4 h-4 md:w-5 md:h-5" />
-                )}
-              </div>
-              <span className="font-medium whitespace-nowrap text-sm md:text-base">Listen to Movo sell</span>
-            </button>
 
-            <audio
-              ref={heroAudioRef}
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Video_1-D2xUSPWZjqPYNOsmcPCtTFZXhoqY0u.mp3"
-              className="hidden"
-            />
+            <audio ref={heroAudioRef} src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Video_1-D2xUSPWZjqPYNOsmcPCtTFZXhoqY0u.mp3" className="hidden" />
           </div>
 
           <div className="absolute bottom-12 sm:bottom-16 left-0 right-0 px-6 sm:px-8">
@@ -720,20 +693,46 @@ export default function Home() {
       </section>
       <button
         onClick={() => {
-          trackClick("button", "Talk to Movo", "floating_cta", {
-            button_type: "floating",
-            action: "open_call_modal",
-          })
-          setShowCallMe(true)
+          if (isCallActive) {
+            setIsCallActive(false)
+            setShowCallMe(false)
+            setCallMeForm({ name: "", email: "", phone: "", newsletter: true })
+            trackClick("button", "End Call", "floating_cta", {
+              button_type: "floating",
+              action: "end_call",
+            })
+          } else {
+            trackClick("button", "Talk to Movo", "floating_cta", {
+              button_type: "floating",
+              action: "open_call_modal",
+            })
+            setShowCallMe(true)
+          }
         }}
-        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-white text-gray-900 font-semibold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 group cursor-pointer"
+        className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-2xl transition-all duration-300 hover:scale-105 group cursor-pointer ${
+          isCallActive
+            ? "bg-white text-gray-900 border-4 border-blue-500"
+            : isCallConnecting
+              ? "bg-white text-gray-900 border-4 border-blue-500 animate-pulse"
+              : "bg-white text-gray-900 hover:shadow-3xl"
+        }`}
       >
-        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-          <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          {/* Pulsing ring effect */}
-          <div className="absolute inset-0 rounded-lg bg-green-500 animate-ping opacity-40"></div>
+        <div
+          className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${
+            isCallActive ? "bg-gradient-to-br from-red-400 to-red-600" : "bg-gradient-to-br from-green-400 to-green-600"
+          }`}
+        >
+          <Phone className={`w-4 h-4 sm:w-5 sm:h-5 text-white ${isCallActive ? "animate-pulse" : ""}`} />
+          {!isCallActive && !isCallConnecting && (
+            <div className="absolute inset-0 rounded-lg bg-green-500 animate-ping opacity-40"></div>
+          )}
+          {isCallConnecting && (
+            <div className="absolute inset-0 rounded-lg border-2 border-blue-500 animate-spin"></div>
+          )}
         </div>
-        <span className="text-sm sm:text-base">Talk to Movo</span>
+        <span className="text-sm sm:text-base font-semibold">
+          {isCallActive ? "End call" : isCallConnecting ? "Connecting..." : "Talk to Movo"}
+        </span>
       </button>
       <section id="product" className="min-h-screen flex items-center">
         <div className="w-full grid lg:grid-cols-2">
@@ -838,8 +837,7 @@ export default function Home() {
           <div
             className="relative px-4 sm:px-6 md:px-10 lg:px-12 py-6 sm:py-8 md:py-10 flex items-center justify-center overflow-hidden"
             style={{
-              backgroundImage:
-                "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%2010%202025%20%282%29-V8JNogRABiiVjppDmMwDRCWb6aV7yD.png)",
+              backgroundImage: "url(/images/kids-20playing-20sport-20graphic-20nov-2010-202025-20-282-29.png)",
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -955,7 +953,7 @@ export default function Home() {
                           </div>
                           <div className="flex-1">
                             <p className="text-[10px] sm:text-xs font-semibold text-gray-900">Trial booked</p>
-                            <p className="text-[9px] sm:text-[10px] text-gray-600">$150 revenде</p>
+                            <p className="text-[9px] sm:text-xs text-gray-600">$150 revenде</p>
                           </div>
                         </div>
                       </div>
@@ -1608,8 +1606,20 @@ export default function Home() {
               >
                 {isSubmittingCall ? (
                   <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
                       <path
                         className="opacity-75"
                         fill="currentColor"
@@ -1643,11 +1653,7 @@ export default function Home() {
             </button>
             <h2 className="text-2xl font-bold mb-4">Hear Movo Sell</h2>
             <p className="text-gray-600 mb-6">Listen to how Movo handles a real parent inquiry</p>
-            <audio
-              ref={audioRef}
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav"
-              className="hidden"
-            />
+            <audio ref={audioRef} src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav" className="hidden" />
             <button
               onClick={() => {
                 trackClick("button", `${isPlaying ? "Pause" : "Play"} Audio`, "audio_modal", {

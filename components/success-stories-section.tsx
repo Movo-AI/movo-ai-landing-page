@@ -9,7 +9,7 @@ const caseStudies = [
     logo: "/supreme-hoops-logo.png",
     headline: "Veterans Day clinics sold out - automatically.",
     quote:
-      "We launched a promotion and Movo handled everything. It called hundreds of old leads, re-engaged parents who hadn’t converted, and booked out every available trial. Parents loved how personal it felt — they thought they were speaking with our staff. Now we’re planning to run every campaign through Movo.",
+      "We launched a promotion and Movo handled everything. It called hundreds of old customers, re-engaged parents who hadn’t converted, and booked out every available trial. Parents loved how personal it felt — they thought they were speaking with our staff. Now we’re planning to run every campaign through Movo.",
     stats: [
       { value: "+$7,800", label: "new revenue in 30 days" },
       { value: "+61%", label: "trial sign-ups" },
