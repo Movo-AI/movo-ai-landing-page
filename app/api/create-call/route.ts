@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { containsUnsafeLanguageInFields } from "@/lib/moderation"
 
 function normalizePhoneNumber(phone: string): string {
   const cleaned = phone.replace(/[^\d+]/g, "")
@@ -65,6 +66,13 @@ export async function POST(request: NextRequest) {
 
     if (!name || !email || !phone) {
       return NextResponse.json({ error: "Name, email, and phone are required" }, { status: 400 })
+    }
+
+    if (containsUnsafeLanguageInFields([name, email, phone])) {
+      return NextResponse.json(
+        { error: "We couldn't process your request. Please remove unsafe language and try again." },
+        { status: 400 },
+      )
     }
 
     const normalizedPhone = normalizePhoneNumber(phone)
