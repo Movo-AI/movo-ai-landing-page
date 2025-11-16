@@ -32,9 +32,15 @@ const caseStudies = [
   },
 ]
 
-export function SuccessStoriesSection() {
+type SuccessStoriesSectionProps = {
+  id?: string
+}
+
+export function SuccessStoriesSection({ id }: SuccessStoriesSectionProps = {}) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
+
+  const sectionId = id ?? "success"
 
   const goToPrevious = () => {
     if (isAnimating) return
@@ -51,7 +57,7 @@ export function SuccessStoriesSection() {
   }
 
   return (
-    <section id="success" className="py-12 bg-white">
+    <section id={sectionId} className="py-12 bg-white">
       <div className="max-w-[1400px] mx-auto px-8 md:px-16">
         <div className="mb-8">
           <p className="text-sm font-semibold tracking-wider text-gray-500 uppercase mb-2">SUCCESS STORIES</p>
