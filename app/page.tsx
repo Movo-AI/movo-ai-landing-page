@@ -877,18 +877,7 @@ export default function Home() {
                 your best rep.
               </p>
 
-              <button
-                onClick={handleLearnVideoPlay}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white text-base font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer mb-6"
-              >
-                {isLearnVideoPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-                Hear Movo learn in action
-              </button>
-              {/* </CHANGE> */}
+              
               
               <audio
                 ref={learnVideoRef}
@@ -1061,7 +1050,7 @@ export default function Home() {
                       <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-1.5 sm:mb-2">
                         Recent Conversations
                       </h4>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-y-2">
+                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-2">
                         <div className="text-[10px] sm:text-xs text-gray-700">
                           <p>Hi Jessica! Yes, we have two options:</p>
                         </div>
@@ -1418,17 +1407,7 @@ export default function Home() {
                 with no extra staff or marketing spend.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={handleHeroAudioPlay}
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
-                >
-                  {isHeroAudioPlaying ? (
-                    <Pause className="w-5 h-5" />
-                  ) : (
-                    <Play className="w-5 h-5" />
-                  )}
-                  Hear Movo in Action
-                </button>
+                
                 {/* </CHANGE> */}
                 <a
                   href="https://calendly.com/ari-movoai/30min"
