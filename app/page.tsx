@@ -2384,13 +2384,23 @@ export default function Home() {
                 Continue to call
               </button>
               <p className="text-xs text-gray-400">
-                By continuing you consent to being contacted about Movo AI and
-                agree to our{" "}
+                By submitting this form, you consent to receive automated SMS
+                messages from Movo AI related to my inquiry or reservation.
+                Message and data rates may apply. Frequency varies. Reply STOP
+                to opt out or HELP for help. Consent is not a condition of
+                purchase. You also agree to our{" "}
                 <a
                   href="/privacy"
                   className="underline decoration-gray-300 underline-offset-4 hover:text-gray-600"
                 >
                   Privacy Policy
+                </a>{" "}
+                and our{" "}
+                <a
+                  href="/terms"
+                  className="underline decoration-gray-300 underline-offset-4 hover:text-gray-600"
+                >
+                  Terms of Service
                 </a>
                 .
               </p>
