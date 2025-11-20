@@ -34,6 +34,9 @@ export default function Home() {
     { role: string; text: string; id: number }[]
   >([]);
   const vapiRef = useRef<any | null>(null);
+  const vapiEventHandlersRef = useRef<
+    { event: string; handler: (...args: any[]) => void }[]
+  >([]);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const assistantSpeakingTimeoutRef = useRef<ReturnType<
     typeof setTimeout
@@ -149,27 +152,28 @@ export default function Home() {
         const vapi = new Vapi("42e246dc-74d0-4145-9c99-07c17575f930");
         vapiRef.current = vapi;
 
-        vapi.on("call-start", () => {
+        // Store handler references for cleanup
+        const handleCallStart = () => {
           setIsWebCallConnecting(false);
           setIsWebCallActive(true);
-        });
+        };
 
-        vapi.on("call-end", () => {
+        const handleCallEnd = () => {
           setIsWebCallActive(false);
           setIsWebCallConnecting(false);
           setHasVapiAccess(false);
-        });
+        };
 
-        vapi.on("error", (error: any) => {
+        const handleError = (error: any) => {
           console.error("[Vapi] Web call error:", error);
           setWebCallError(
             error?.message || "Something went wrong with the call."
           );
           setIsWebCallActive(false);
           setIsWebCallConnecting(false);
-        });
+        };
 
-        vapi.on("transcript" as any, (data: any) => {
+        const handleTranscript = (data: any) => {
           if (!data?.transcript) return;
           setWebTranscripts((prev) => [
             ...prev,
@@ -191,6 +195,31 @@ export default function Home() {
               setIsAssistantSpeaking(false);
             }, 900);
           }
+        };
+
+        // Register event listeners and store references in ref
+        vapi.on("call-start", handleCallStart);
+        vapiEventHandlersRef.current.push({
+          event: "call-start",
+          handler: handleCallStart,
+        });
+
+        vapi.on("call-end", handleCallEnd);
+        vapiEventHandlersRef.current.push({
+          event: "call-end",
+          handler: handleCallEnd,
+        });
+
+        vapi.on("error", handleError);
+        vapiEventHandlersRef.current.push({
+          event: "error",
+          handler: handleError,
+        });
+
+        vapi.on("transcript" as any, handleTranscript);
+        vapiEventHandlersRef.current.push({
+          event: "transcript",
+          handler: handleTranscript,
         });
       } catch (err) {
         console.error("[Vapi] Failed to initialize Web SDK:", err);
@@ -205,7 +234,35 @@ export default function Home() {
     return () => {
       mounted = false;
       try {
-        if (vapiRef.current) {
+        // Clean up timeout
+        if (assistantSpeakingTimeoutRef.current) {
+          clearTimeout(assistantSpeakingTimeoutRef.current);
+          assistantSpeakingTimeoutRef.current = null;
+        }
+
+        // Remove all event listeners
+        if (vapiRef.current && vapiEventHandlersRef.current.length > 0) {
+          vapiEventHandlersRef.current.forEach(({ event, handler }) => {
+            try {
+              // Try both 'off' and 'removeListener' methods (common event emitter patterns)
+              if (typeof vapiRef.current.off === "function") {
+                vapiRef.current.off(event, handler);
+              } else if (typeof vapiRef.current.removeListener === "function") {
+                vapiRef.current.removeListener(event, handler);
+              }
+            } catch (err) {
+              // Ignore errors when removing listeners
+              console.warn(
+                `[Vapi] Failed to remove listener for ${event}:`,
+                err
+              );
+            }
+          });
+
+          // Clear the handlers array
+          vapiEventHandlersRef.current = [];
+
+          // Stop the call if active
           vapiRef.current.stop?.();
         }
       } catch {
@@ -944,10 +1001,11 @@ export default function Home() {
             <button
               onClick={() => {
                 trackClick("button", "Speak to Movo", "hero", {
-                  action: "open_call_modal",
+                  action: "open_vapi_prefill",
                   cta_type: "primary",
+                  source: "hero_button",
                 });
-                setShowCallMe(true);
+                setShowVapiPrefill(true);
               }}
               className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[48px]"
             >
