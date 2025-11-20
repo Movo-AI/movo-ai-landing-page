@@ -1598,9 +1598,8 @@ export default function Home() {
 
           <div className="text-center pt-8 border-t border-gray-200">
             <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Movo AI automates communications and may use AI-generated voice or
-              text responses. Conversations may be recorded or analyzed to
-              improve service quality, consistent with our{" "}
+              By submitting your phone number above, you consent to the Mobile Terms and to receive automated calls (including AI-generated calls) and texts from Movo AI at the number provided. Message and data rates may apply. Frequency may vary. Reply STOP anytime to opt out of texts. Consent is not a condition of purchase. 
+              {" "}
               <a
                 href="/privacy"
                 onClick={() =>
