@@ -37,6 +37,7 @@ export default function Home() {
   const vapiEventHandlersRef = useRef<
     { event: string; handler: (...args: any[]) => void }[]
   >([]);
+  const vapiEmailQueueRef = useRef<string[]>([]); // Queue to store emails for pending calls (FIFO)
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const assistantSpeakingTimeoutRef = useRef<ReturnType<
     typeof setTimeout
@@ -222,6 +223,32 @@ export default function Home() {
         const handleCallStart = () => {
           setIsWebCallConnecting(false);
           setIsWebCallActive(true);
+
+          // Send email API call in the background when call is successfully connected
+          // Use FIFO queue to ensure each call-start gets the email from the call that initiated it
+          // This prevents race conditions when multiple calls are initiated quickly
+          const email = vapiEmailQueueRef.current.shift(); // Remove and get first email from queue
+          if (email) {
+            // Fire and forget - don't block execution
+            fetch(
+              "https://acuity-stub.vercel.app/api/v1/emails/send-template",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  from: "ari@movoai.co",
+                  fromName: "Ari Posner",
+                  templateID: "d-7637fbd58f1e4463a93cc96ced411788",
+                  cc: "ari@movoai.co",
+                  to: email,
+                }),
+              }
+            ).catch((error) => {
+              console.error("[Email API] Failed to send email:", error);
+            });
+          }
         };
 
         const handleCallEnd = () => {
@@ -229,6 +256,9 @@ export default function Home() {
           setIsWebCallConnecting(false);
           setHasVapiAccess(false);
           setWebCallError(null);
+          // Note: Email queue is managed per-call, so no need to clear here
+          // If call ends before connecting, the email will remain in queue but won't be used
+          // since handleCallStart only fires when call successfully connects
         };
 
         const handleError = (error: any) => {
@@ -236,6 +266,10 @@ export default function Home() {
           setWebCallError(normalizeCallError(error));
           setIsWebCallActive(false);
           setIsWebCallConnecting(false);
+          // If call errors before connecting, remove the corresponding email from queue
+          // to prevent it from being used by a future call-start event
+          // Use shift() to remove the first item (FIFO order)
+          vapiEmailQueueRef.current.shift();
         };
 
         const handleTranscript = (data: any) => {
@@ -659,6 +693,11 @@ export default function Home() {
     setWebCallError(null);
     setIsWebCallConnecting(true);
 
+    // Add email to queue for use in call-start event handler
+    // Using a queue ensures FIFO ordering, so each call-start gets the correct email
+    // even if multiple calls are initiated before any connect
+    vapiEmailQueueRef.current.push(vapiUserInfo.email);
+
     setHasVapiAccess(true);
     setShowVapiPrefill(false);
     setVapiConsentChecked(false);
@@ -725,6 +764,9 @@ export default function Home() {
           setIsWebCallConnecting(false);
           setIsWebCallActive(false);
           setHasVapiAccess(false);
+          // Remove email from queue since call failed synchronously
+          // This prevents the email from being used by a future call-start event
+          vapiEmailQueueRef.current.shift();
         });
     } catch (error: any) {
       console.error("[Vapi] Error starting web call:", error);
@@ -732,6 +774,9 @@ export default function Home() {
       setIsWebCallConnecting(false);
       setIsWebCallActive(false);
       setHasVapiAccess(false);
+      // Remove email from queue since call failed synchronously
+      // This prevents the email from being used by a future call-start event
+      vapiEmailQueueRef.current.shift();
     }
   };
 
