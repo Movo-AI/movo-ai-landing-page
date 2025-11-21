@@ -1055,14 +1055,14 @@ export default function Home() {
           <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3 sm:gap-4 justify-center px-4">
             <button
               onClick={() => {
-                trackClick("button", "Speak to Movo", "hero", {
+                trackClick("button", "Talk to Movo", "vapi_prefill", {
                   action: "open_vapi_prefill",
                   cta_type: "primary",
                   source: "hero_button",
                 })
                 setShowVapiPrefill(true)
               }}
-              className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-lg transition-all duration-300 hover:shadow-xl hover:scale-105 w-full sm:w-auto cursor-pointer animate-slide-in-out"
+              className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 w-full sm:w-auto cursor-pointer animate-slide-in-out"
             >
               Talk to Movo
               <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1078,7 +1078,7 @@ export default function Home() {
                   cta_type: "secondary",
                 })
               }
-              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
+              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-xl transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
             >
               <span className="font-medium whitespace-nowrap text-sm md:text-base">Book a demo</span>
             </a>
@@ -1184,15 +1184,15 @@ export default function Home() {
       {!hasVapiAccess && !isWebCallConnecting && !isWebCallActive && !webCallError && (
         <button
           onClick={() => {
-            trackClick("button", "Open Vapi Prefill", "vapi_prefill", {
+            trackClick("button", "Talk to Movo", "vapi_prefill", {
               source: "floating_pill",
             })
             setShowVapiPrefill(true)
           }}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-white text-gray-900 px-4 py-2.5 text-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer animate-slide-in-out"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-xl bg-[#D97948] hover:bg-[#C96838] text-white px-6 py-3 text-base shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer animate-slide-in-out"
         >
-          <span className="font-medium">Call Me</span>
-          <Phone className="w-4 h-4" />
+          <span className="font-medium">Talk to Movo</span>
+          <Phone className="w-5 h-5" />
         </button>
       )}
       <section id="product" className="min-h-screen flex items-center">
@@ -1635,7 +1635,7 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() =>
-                trackClick("link", "Book a demo", "solution", {
+                trackClick("link", "Book a Demo", "solution", {
                   url: "https://calendly.com/ari-movoai/30min",
                   cta_type: "primary",
                   location: "solution_section",
