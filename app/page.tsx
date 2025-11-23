@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
-import { Phone, Pause } from "lucide-react"
+import { Phone, Pause, Play } from "lucide-react"
 import { Header } from "@/components/header"
 import { ProblemSection } from "@/components/problem-section"
 import { WhoItsFor } from "@/components/who-its-for"
@@ -106,18 +106,104 @@ export default function Home() {
     email: "",
     phone: "",
   })
-  const [vapiConsentChecked, setVapiConsentChecked] = useState(false)
+  const [vapiConsentChecked, setVapiConsentChecked] = useState(true) // CHANGE: Set consent checkbox to checked by default
 
   const trackClick = (elementType: string, elementText: string, section: string, metadata?: Record<string, any>) => {
     // Removed posthog.capture call
   }
-  const learnVideoRef = useRef<HTMLAudioElement>(null)
+  const learnVideoRef = useRef<HTMLAudioElement | null>(null)
   const heroAudioRef = useRef<HTMLAudioElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [audioProgress, setAudioProgress] = useState(0)
-  const audioRef = useRef<HTMLAudioElement>(null) // Changed from heroAudioRef to audioRef for general audio playback
 
-  const [learnAudioUrl, setLearnAudioUrl] = useState<string>("")
+  const audioDataRef = useRef<{
+    learnAudio: Blob | null
+    hearMovoAudio: Blob | null
+  }>({
+    learnAudio: null,
+    hearMovoAudio: null,
+  })
+
+  useEffect(() => {
+    const loadProtectedAudio = async () => {
+      try {
+        // Fetch audio data but don't create URLs yet - keep as blobs in memory
+        const [learnResponse, hearResponse] = await Promise.all([
+          fetch("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3"),
+          fetch("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3"),
+        ])
+
+        audioDataRef.current = {
+          learnAudio: await learnResponse.blob(),
+          hearMovoAudio: await hearResponse.blob(),
+        }
+      } catch (error) {
+        console.error("[v0] Error loading audio:", error)
+      }
+    }
+
+    loadProtectedAudio()
+  }, [])
+
+  const playProtectedAudio = (
+    audioType: "learn" | "hearMovo",
+    refToUse: React.MutableRefObject<HTMLAudioElement | null>,
+    setPlayingState: (playing: boolean) => void,
+  ) => {
+    const blob = audioType === "learn" ? audioDataRef.current.learnAudio : audioDataRef.current.hearMovoAudio
+
+    if (!blob) return
+
+    // If already playing, pause and clean up
+    if (refToUse.current) {
+      refToUse.current.pause()
+      const oldUrl = refToUse.current.src
+      refToUse.current.src = ""
+      refToUse.current.remove()
+      refToUse.current = null
+      if (oldUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(oldUrl)
+      }
+      setPlayingState(false)
+      return
+    }
+
+    // Create temporary audio element dynamically
+    const audio = new Audio()
+    const blobUrl = URL.createObjectURL(blob)
+
+    audio.src = blobUrl
+    audio.oncontextmenu = (e) => e.preventDefault()
+
+    audio.onended = () => {
+      setPlayingState(false)
+      URL.revokeObjectURL(blobUrl)
+      audio.remove()
+      refToUse.current = null
+    }
+
+    if (audioType === "hearMovo") {
+      audio.ontimeupdate = () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+          const progress = (audio.currentTime / audio.duration) * 100
+          setAudioProgress(progress)
+        }
+      }
+    }
+
+    refToUse.current = audio
+    audio.play().catch((err) => {
+      console.error("[v0] Playback error:", err)
+      setPlayingState(false)
+      URL.revokeObjectURL(blobUrl)
+      audio.remove()
+      refToUse.current = null
+    })
+    setPlayingState(true)
+  }
+
   const [hearMovoAudioUrl, setHearMovoAudioUrl] = useState<string>("")
+  const [learnAudioUrl, setLearnAudioUrl] = useState<string>("") // Declared setLearnAudioUrl
 
   useEffect(() => {
     const createProtectedAudioUrls = async () => {
@@ -1186,41 +1272,16 @@ export default function Home() {
 
               {/* CHANGE: Added "See Movo learn in action" button */}
               <button
-                onClick={() => {
-                  if (learnVideoRef.current) {
-                    if (learnVideoRef.current.paused) {
-                      learnVideoRef.current.play()
-                      setIsLearnVideoPlaying(true)
-                    } else {
-                      learnVideoRef.current.pause()
-                      setIsLearnVideoPlaying(false)
-                    }
-                  }
-                }}
-                className="flex items-center gap-3 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-lg transition-all duration-300 hover:shadow-xl mb-8"
+                onClick={() => playProtectedAudio("learn", learnVideoRef, setIsLearnVideoPlaying)}
+                className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
               >
-                {isLearnVideoPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                )}
+                {isLearnVideoPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                 See Movo learn in action
               </button>
 
-              <audio
-                ref={learnVideoRef}
-                {...(learnAudioUrl && { src: learnAudioUrl })}
-                className="hidden"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-                onEnded={() => setIsLearnVideoPlaying(false)}
-              />
-
               {/* Numbered features */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <div className="flex gap-4 group cursor-pointer">
+              <div className="space-y-4 pt-6">
+                <div className="flex gap-4">
                   <div className="text-2xl font-bold text-gray-900 flex-shrink-0">01</div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 mb-1">Understands your playbook</h3>
@@ -1229,7 +1290,7 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-4 group cursor-pointer">
+                <div className="flex gap-4">
                   <div className="text-2xl font-bold text-gray-900 flex-shrink-0">02</div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 mb-1">Connects your systems</h3>
@@ -1239,7 +1300,7 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-4 group cursor-pointer">
+                <div className="flex gap-4">
                   <div className="text-2xl font-bold text-gray-900 flex-shrink-0">03</div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 mb-1">Gets smarter every week</h3>
@@ -1653,27 +1714,10 @@ export default function Home() {
               {/* CHANGE: Updated to play audio directly instead of opening modal */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => {
-                    if (audioRef.current) {
-                      // Changed to audioRef for general audio playback
-                      if (audioRef.current.paused) {
-                        audioRef.current.play()
-                        setIsPlaying(true)
-                      } else {
-                        audioRef.current.pause()
-                        setIsPlaying(false)
-                      }
-                    }
-                  }}
-                  className="flex items-center justify-center gap-3 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-lg transition-all duration-300 hover:shadow-xl"
+                  onClick={() => playProtectedAudio("hearMovo", audioRef, setIsPlaying)}
+                  className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
                 >
-                  {isPlaying ? (
-                    <Pause className="w-5 h-5" />
-                  ) : (
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
+                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                   Hear Movo in Action
                 </button>
                 <a
@@ -1681,7 +1725,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {}}
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-semibold rounded-lg border-2 border-gray-900 transition-all duration-300 hover:shadow-xl"
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-lg border-2 border-gray-900 transition-all duration-300 hover:shadow-xl"
                 >
                   Book a Demo
                 </a>
@@ -2090,7 +2134,6 @@ export default function Home() {
       {/* Hidden audio element for "Hear Movo in Action" button */}
       <audio
         ref={audioRef} // Changed from heroAudioRef to audioRef for general audio playback
-        {...(hearMovoAudioUrl && { src: hearMovoAudioUrl })}
         onTimeUpdate={() => {
           if (audioRef.current) {
             // Ensure audioRef.current is not null and duration is valid before calculating progress
@@ -2106,6 +2149,133 @@ export default function Home() {
         onContextMenu={(e) => e.preventDefault()}
         controlsList="nodownload"
       />
+
+      {/* CHANGE: Adding missing Vapi prefill form modal */}
+      {showVapiPrefill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">BEFORE YOU START</p>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Share a few details</h2>
+                <p className="text-gray-500">We'll use this so Movo can personalize the conversation.</p>
+              </div>
+              <button
+                onClick={() => setShowVapiPrefill(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleVapiPrefillSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="vapi-name"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  NAME
+                </label>
+                <input
+                  id="vapi-name"
+                  type="text"
+                  value={vapiUserInfo.name}
+                  onChange={(e) => setVapiUserInfo({ ...vapiUserInfo, name: e.target.value })}
+                  placeholder="Alex Johnson"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="vapi-email"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  EMAIL
+                </label>
+                <input
+                  id="vapi-email"
+                  type="email"
+                  value={vapiUserInfo.email}
+                  onChange={(e) => setVapiUserInfo({ ...vapiUserInfo, email: e.target.value })}
+                  placeholder="you@academy.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="vapi-phone"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  PHONE
+                </label>
+                <input
+                  id="vapi-phone"
+                  type="tel"
+                  value={vapiUserInfo.phone}
+                  onChange={(e) => setVapiUserInfo({ ...vapiUserInfo, phone: e.target.value })}
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input
+                  id="vapi-consent"
+                  type="checkbox"
+                  checked={vapiConsentChecked}
+                  onChange={(e) => setVapiConsentChecked(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-[#D97948] border-gray-300 rounded focus:ring-[#D97948]"
+                  required
+                />
+                <label htmlFor="vapi-consent" className="text-xs text-gray-500 leading-relaxed">
+                  I agree to receive automated SMS messages from Movo AI related to my inquiry or reservation. Message
+                  and data rates may apply. Frequency varies. Reply STOP to opt out or HELP for help. Consent is not a
+                  condition of purchase. You also agree to our{" "}
+                  <a
+                    href="https://www.movoai.co/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-700"
+                  >
+                    Privacy Policy
+                  </a>{" "}
+                  and our{" "}
+                  <a
+                    href="https://www.movoai.co/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-700"
+                  >
+                    Terms of Service
+                  </a>
+                  .
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={
+                  !vapiUserInfo.name ||
+                  !vapiUserInfo.email ||
+                  !vapiUserInfo.phone ||
+                  !vapiConsentChecked ||
+                  isWebCallConnecting
+                }
+                className="w-full py-3 bg-[#D97948] hover:bg-[#C96838] text-white font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isWebCallConnecting ? "Connecting..." : "Start Call"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }
