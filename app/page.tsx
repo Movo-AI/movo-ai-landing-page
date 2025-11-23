@@ -3,8 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
-import { Phone, Play, Pause } from "lucide-react"
-import posthog from "posthog-js"
+import { Phone, Pause } from "lucide-react"
 import { Header } from "@/components/header"
 import { ProblemSection } from "@/components/problem-section"
 import { WhoItsFor } from "@/components/who-its-for"
@@ -110,18 +109,43 @@ export default function Home() {
   const [vapiConsentChecked, setVapiConsentChecked] = useState(false)
 
   const trackClick = (elementType: string, elementText: string, section: string, metadata?: Record<string, any>) => {
-    posthog.capture("button_click", {
-      element_type: elementType,
-      element_text: elementText,
-      section,
-      page_url: typeof window !== "undefined" ? window.location.pathname : "",
-      ...metadata,
-    })
+    // Removed posthog.capture call
   }
   const learnVideoRef = useRef<HTMLAudioElement>(null)
   const heroAudioRef = useRef<HTMLAudioElement>(null)
   const [audioProgress, setAudioProgress] = useState(0)
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null) // Changed from heroAudioRef to audioRef for general audio playback
+
+  const [learnAudioUrl, setLearnAudioUrl] = useState<string>("")
+  const [hearMovoAudioUrl, setHearMovoAudioUrl] = useState<string>("")
+
+  useEffect(() => {
+    const createProtectedAudioUrls = async () => {
+      try {
+        // Fetch and create blob URL for "See Movo learn in action"
+        const learnResponse = await fetch("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3")
+        const learnBlob = await learnResponse.blob()
+        const learnUrl = URL.createObjectURL(learnBlob)
+        setLearnAudioUrl(learnUrl)
+
+        // Fetch and create blob URL for "Hear Movo in Action"
+        const hearResponse = await fetch("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3")
+        const hearBlob = await hearResponse.blob()
+        const hearUrl = URL.createObjectURL(hearBlob)
+        setHearMovoAudioUrl(hearUrl)
+      } catch (error) {
+        console.error("[v0] Error loading protected audio:", error)
+      }
+    }
+
+    createProtectedAudioUrls()
+
+    // Cleanup blob URLs on unmount
+    return () => {
+      if (learnAudioUrl) URL.revokeObjectURL(learnAudioUrl)
+      if (hearMovoAudioUrl) URL.revokeObjectURL(hearMovoAudioUrl)
+    }
+  }, [])
 
   const [isPhonePlaying, setIsPhonePlaying] = useState(false)
   const [phoneAudioProgress, setPhoneAudioProgress] = useState(0)
@@ -225,7 +249,7 @@ export default function Home() {
                 from: "ari@movoai.co",
                 fromName: "Ari Posner",
                 templateId: "d-7637fbd58f1e4463a93cc96ced411788",
-                cc: "ari@movoai.co",
+                cc: "ari@movo.co",
                 to: callInfo.email,
                 dynamicTemplateData: {
                   first_name: firstName,
@@ -376,59 +400,11 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (showHearMovo && audioRef.current) {
-      console.log("[v0] Hear Movo modal opened, attempting to play audio")
-      // Small delay to ensure modal is visible
-      setTimeout(() => {
-        const playPromise = audioRef.current?.play()
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("[v0] Audio playback started successfully")
-              setIsPlaying(true)
-            })
-            .catch((error) => {
-              console.log("[v0] Auto-play prevented by browser:", error)
-              // Browser prevented autoplay, user needs to click play button
-              setIsPlaying(false)
-            })
-        }
-      }, 500)
-    } else if (!showHearMovo && audioRef.current) {
-      console.log("[v0] Modal closed, stopping audio")
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-      setIsPlaying(false)
-      setAudioProgress(0)
-    }
-  }, [showHearMovo])
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: "0px",
-    }
-
-    const animateOnScroll = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("animate-in")
-        }
-      })
-    }
-
-    const observer = new IntersectionObserver(animateOnScroll, observerOptions)
-    const elements = document.querySelectorAll(".fade-on-scroll")
-    elements.forEach((el) => observer.observe(el))
-
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
     const updateProgress = () => {
+      if (!audio || isNaN(audio.duration) || audio.duration === 0) return // Ensure duration is valid
       const progress = (audio.currentTime / audio.duration) * 100
       setAudioProgress(progress)
     }
@@ -513,6 +489,7 @@ export default function Home() {
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
+      // Changed to audioRef for general audio playback
       if (isPlaying) {
         audioRef.current.pause()
         setIsPlaying(false)
@@ -547,10 +524,7 @@ export default function Home() {
       .join(" ")
     if (containsUnsafeLanguage(submittedText)) {
       setCallError("We couldn't process your request. Please remove unsafe language and try again.")
-      posthog.capture("call_request_blocked", {
-        reason: "unsafe_language",
-        form: "call_me",
-      })
+      // Removed posthog.capture call
       return
     }
 
@@ -599,13 +573,7 @@ export default function Home() {
 
       const firstName = callMeForm.name.trim().split(" ")[0] || ""
 
-      posthog.capture("call_request_submitted", {
-        call_id: data.callId,
-        email_domain: emailDomain,
-        phone_country_code: phoneCountryCode,
-        first_name: firstName,
-      })
-
+      // Removed posthog.capture call
       fetch("/api/notify-slack", {
         method: "POST",
         headers: {
@@ -753,9 +721,8 @@ export default function Home() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (audioRef.current && isPlaying) {
-        // The error was here: `audio` was used instead of `audioRef.current`
         const audio = audioRef.current
-        if (!audio) return // Added safety check
+        if (!audio || isNaN(audio.duration) || audio.duration === 0) return // Added safety check
         const progress = (audio.currentTime / audio.duration) * 100
         setAudioProgress(progress)
       }
@@ -769,6 +736,7 @@ export default function Home() {
     if (!audio) return
 
     const updateProgress = () => {
+      if (!audio || isNaN(audio.duration) || audio.duration === 0) return // Ensure duration is valid
       const progress = (audio.currentTime / audio.duration) * 100
       setPhoneAudioProgress(progress)
     }
@@ -1055,14 +1023,10 @@ export default function Home() {
           <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3 sm:gap-4 justify-center px-4">
             <button
               onClick={() => {
-                trackClick("button", "Talk to Movo", "vapi_prefill", {
-                  action: "open_vapi_prefill",
-                  cta_type: "primary",
-                  source: "hero_button",
-                })
+                // Removed posthog.capture call
                 setShowVapiPrefill(true)
               }}
-              className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 w-full sm:w-auto cursor-pointer animate-slide-in-out"
+              className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-lg transition-all duration-300 hover:shadow-xl hover:scale-105 w-full sm:w-auto cursor-pointer animate-slide-in-out"
             >
               Talk to Movo
               <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1072,18 +1036,13 @@ export default function Home() {
               href="https://calendly.com/ari-movoai/30min"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
-                trackClick("link", "Book a demo", "hero", {
-                  url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "secondary",
-                })
-              }
-              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-xl transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
+              onClick={() => {}}
+              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-lg transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
             >
               <span className="font-medium whitespace-nowrap text-sm md:text-base">Book a demo</span>
             </a>
 
-            <audio ref={heroAudioRef} src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Video_1-D2xUSPWZjqPYNOsmcPCtTFZXhoqY0u.mp3" className="hidden" />
+            <audio ref={heroAudioRef} src="/audio/hero-intro.mp3" className="hidden" />
           </div>
 
           <div className="absolute bottom-12 sm:bottom-16 left-0 right-0 px-6 sm:px-8">
@@ -1181,19 +1140,26 @@ export default function Home() {
           ) : null}
         </button>
       )}
+      {/* CHANGE: Updated to match HappyRobot design - less rounded, narrower, with custom phone icon */}
       {!hasVapiAccess && !isWebCallConnecting && !isWebCallActive && !webCallError && (
-        <button
-          onClick={() => {
-            trackClick("button", "Talk to Movo", "vapi_prefill", {
-              source: "floating_pill",
-            })
-            setShowVapiPrefill(true)
-          }}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-xl bg-[#D97948] hover:bg-[#C96838] text-white px-6 py-3 text-base shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer animate-slide-in-out"
-        >
-          <span className="font-medium">Talk to Movo</span>
-          <Phone className="w-5 h-5" />
-        </button>
+        <div className="fixed bottom-6 right-6 z-40">
+          <div className="bg-[#8B7355]/15 backdrop-blur-sm rounded-[18px] p-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+            <button
+              onClick={() => {
+                trackClick("button", "Talk to Movo", "vapi_prefill", {
+                  source: "floating_pill",
+                })
+                setShowVapiPrefill(true)
+              }}
+              className="flex items-center gap-3 rounded-[14px] bg-white hover:bg-gray-50 text-gray-900 pl-3 pr-5 py-2.5 text-base font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-200 cursor-pointer"
+            >
+              <span className="flex items-center justify-center w-[42px] h-[42px] rounded-[8px] overflow-hidden flex-shrink-0">
+                <img src="/images/phone-icon.png" alt="Phone" className="w-full h-full object-cover" />
+              </span>
+              <span className="font-semibold tracking-tight whitespace-nowrap">Talk to Movo</span>
+            </button>
+          </div>
+        </div>
       )}
       <section id="product" className="min-h-screen flex items-center">
         <div className="w-full grid lg:grid-cols-2">
@@ -1218,10 +1184,38 @@ export default function Home() {
                 Trains on your programs, pricing, and families - then sells like your best rep.
               </p>
 
+              {/* CHANGE: Added "See Movo learn in action" button */}
+              <button
+                onClick={() => {
+                  if (learnVideoRef.current) {
+                    if (learnVideoRef.current.paused) {
+                      learnVideoRef.current.play()
+                      setIsLearnVideoPlaying(true)
+                    } else {
+                      learnVideoRef.current.pause()
+                      setIsLearnVideoPlaying(false)
+                    }
+                  }
+                }}
+                className="flex items-center gap-3 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-lg transition-all duration-300 hover:shadow-xl mb-8"
+              >
+                {isLearnVideoPlaying ? (
+                  <Pause className="w-5 h-5" />
+                ) : (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+                See Movo learn in action
+              </button>
+
               <audio
                 ref={learnVideoRef}
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Nadav%20Vieder%20Video%20Nov%2011%202025-j07YSAJHlsf8TfJYGARpfwPwkjIzUn.mp3"
+                {...(learnAudioUrl && { src: learnAudioUrl })}
                 className="hidden"
+                onContextMenu={(e) => e.preventDefault()}
+                controlsList="nodownload"
+                onEnded={() => setIsLearnVideoPlaying(false)}
               />
 
               {/* Numbered features */}
@@ -1362,7 +1356,7 @@ export default function Home() {
                       <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-1.5 sm:mb-2">
                         Recent Conversations
                       </h4>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-y-2">
+                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-2">
                         <div className="text-[10px] sm:text-xs text-gray-700">
                           <p>Hi Jessica! Yes, we have two options:</p>
                         </div>
@@ -1374,7 +1368,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-1.5 bg-white border border-green-200 rounded-lg px-2 py-1.5 mt-1.5 sm:mt-2">
                           <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-[9px] sm:text-[10px] font-bold">✓</span>
+                            <span className="text-white text-xs sm:text-sm">✓</span>
                           </div>
                           <div className="flex-1">
                             <p className="text-[10px] sm:text-xs font-semibold text-gray-900">Trial booked</p>
@@ -1513,7 +1507,7 @@ export default function Home() {
                   <div className="w-full bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
 
-                    <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
+                    <div className="bg-white rounded-lg p-3 md:p-4 rounded-lg shadow-sm mt-8 md:mt-6">
                       <div className="flex items-center justify-between mb-2 md:mb-3">
                         <div className="text-sm md:text-base font-semibold text-gray-900">Tues 5 PM Swim</div>
                         <div className="text-[10px] md:text-xs font-bold text-green-700 bg-green-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
@@ -1634,13 +1628,7 @@ export default function Home() {
               href="https://calendly.com/ari-movoai/30min"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
-                trackClick("link", "Book a Demo", "solution", {
-                  url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "primary",
-                  location: "solution_section",
-                })
-              }
+              onClick={() => {}}
               className="inline-block px-10 py-5 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer"
             >
               Book a demo
@@ -1662,18 +1650,38 @@ export default function Home() {
                 Every academy using Movo sees new bookings within days -<br />
                 with no extra staff or marketing spend.
               </p>
+              {/* CHANGE: Updated to play audio directly instead of opening modal */}
               <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => {
+                    if (audioRef.current) {
+                      // Changed to audioRef for general audio playback
+                      if (audioRef.current.paused) {
+                        audioRef.current.play()
+                        setIsPlaying(true)
+                      } else {
+                        audioRef.current.pause()
+                        setIsPlaying(false)
+                      }
+                    }
+                  }}
+                  className="flex items-center justify-center gap-3 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-lg transition-all duration-300 hover:shadow-xl"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  )}
+                  Hear Movo in Action
+                </button>
                 <a
                   href="https://calendly.com/ari-movoai/30min"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() =>
-                    trackClick("link", "Book a Demo", "stats", {
-                      url: "https://calendly.com/ari-movoai/30min",
-                      cta_type: "secondary",
-                    })
-                  }
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
+                  onClick={() => {}}
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-semibold rounded-lg border-2 border-gray-900 transition-all duration-300 hover:shadow-xl"
                 >
                   Book a Demo
                 </a>
@@ -1730,28 +1738,32 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             <button
               onClick={() => {
-                trackClick("button", "Call Me", "final_cta", {
-                  action: "open_vapi_prefill",
-                  cta_type: "primary",
-                  source: "final_cta",
-                })
+                // Removed posthog.capture call
                 setShowVapiPrefill(true)
               }}
               className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
             >
-              <Phone className="w-5 h-5" />
-              Call Me
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-phone w-5 h-5"
+              >
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              Talk to Movo
             </button>
             <a
               href="https://calendly.com/ari-movoai/30min"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
-                trackClick("link", "Book a Demo", "final_cta", {
-                  url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "secondary",
-                })
-              }
+              onClick={() => {}}
               className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
             >
               Book a Demo
@@ -1781,12 +1793,7 @@ export default function Home() {
                 href="https://www.instagram.com/movo.ai/"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() =>
-                  trackClick("link", "Instagram", "footer", {
-                    url: "https://www.instagram.com/movo.ai/",
-                    link_type: "social",
-                  })
-                }
+                onClick={() => {}}
                 className="text-gray-600 hover:text-gray-900 transition-colors"
                 aria-label="Instagram"
               >
@@ -1800,12 +1807,7 @@ export default function Home() {
               </a>
               <a
                 href="mailto:contact@movoai.co"
-                onClick={() =>
-                  trackClick("link", "Email", "footer", {
-                    url: "mailto:contact@movoai.co",
-                    link_type: "contact",
-                  })
-                }
+                onClick={() => {}}
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
                 contact@movoai.co
@@ -1815,24 +1817,14 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <a
                 href="/terms"
-                onClick={() =>
-                  trackClick("link", "Terms", "footer", {
-                    url: "/terms",
-                    link_type: "legal",
-                  })
-                }
+                onClick={() => {}}
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
                 Terms of Service
               </a>
               <a
                 href="/privacy"
-                onClick={() =>
-                  trackClick("link", "Privacy", "footer", {
-                    url: "/privacy",
-                    link_type: "legal",
-                  })
-                }
+                onClick={() => {}}
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
                 Privacy Policy
@@ -1842,19 +1834,27 @@ export default function Home() {
 
           <div className="text-center pt-8 border-t border-gray-200">
             <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              By submitting your phone number above, you consent to the Mobile Terms and to receive automated calls
-              (including AI-generated calls) and texts from Movo AI at the number provided. Message and data rates may
-              apply. Frequency may vary. Reply STOP anytime to opt out of texts. Consent is not a condition of purchase.{" "}
+              By submitting your phone number above, you consent to the{" "}
               <a
-                href="/privacy"
-                onClick={() =>
-                  trackClick("link", "Privacy Policy", "footer", {
-                    url: "/privacy",
-                    link_type: "legal",
-                    context: "disclaimer",
-                  })
-                }
-                className="text-gray-900 underline hover:text-gray-700 transition-colors"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  // Removed posthog.capture call
+                }}
+                className="text-gray-700 underline hover:text-gray-900"
+              >
+                Mobile Terms
+              </a>{" "}
+              and to receive automated calls (including AI-generated calls) and texts from Movo AI at the number
+              provided. Message and data rates may apply. Frequency may vary. Reply STOP anytime to opt out of texts.
+              Consent is not a condition of purchase. See our{" "}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  // Removed posthog.capture call
+                }}
+                className="text-gray-700 underline hover:text-gray-900"
               >
                 Privacy Policy
               </a>
@@ -1868,10 +1868,7 @@ export default function Home() {
           <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
             <button
               onClick={() => {
-                trackClick("button", "Close Call Modal", "call_modal", {
-                  action: "close_modal",
-                  modal_type: "call_request",
-                })
+                // Removed posthog.capture call
                 setShowCallMe(false)
               }}
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors text-2xl leading-none"
@@ -1999,10 +1996,7 @@ export default function Home() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault()
-                      trackClick("link", "Mobile Terms", "call_modal", {
-                        link_type: "legal",
-                        context: "form_disclaimer",
-                      })
+                      // Removed posthog.capture call
                     }}
                     className="text-gray-700 underline hover:text-gray-900"
                   >
@@ -2015,10 +2009,7 @@ export default function Home() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault()
-                      trackClick("link", "Privacy Policy", "call_modal", {
-                        link_type: "legal",
-                        context: "form_disclaimer",
-                      })
+                      // Removed posthog.capture call
                     }}
                     className="text-gray-700 underline hover:text-gray-900"
                   >
@@ -2065,149 +2056,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showHearMovo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-white rounded-sm p-8 max-w-md w-full">
-            <button
-              onClick={() => {
-                trackClick("button", "Close Audio Modal", "audio_modal", {
-                  action: "close_modal",
-                  modal_type: "audio_demo",
-                })
-                setShowHearMovo(false)
-              }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
-            <h2 className="text-2xl font-bold mb-4">Hear Movo Sell</h2>
-            <p className="text-gray-600 mb-6">Listen to how Movo handles a real parent inquiry</p>
-            <audio ref={audioRef} src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav" className="hidden" />
-            <button
-              onClick={() => {
-                trackClick("button", `${isPlaying ? "Pause" : "Play"} Audio`, "audio_modal", {
-                  action: isPlaying ? "pause" : "play",
-                  media_type: "audio",
-                })
-                handlePlayAudio()
-              }}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#D97948] hover:bg-[#C96838] text-white rounded-sm"
-            >
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-              {isPlaying ? "Pause" : "Play"} Audio
-            </button>
-            {audioProgress > 0 && (
-              <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-[#D97948] h-2 rounded-full transition-all" style={{ width: `${audioProgress}%` }} />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Vapi pre-call form modal */}
-      {showVapiPrefill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-7 shadow-2xl">
-            <button
-              onClick={() => {
-                setShowVapiPrefill(false)
-                setVapiConsentChecked(false)
-              }}
-              className="absolute right-5 top-5 text-gray-400 hover:text-gray-700"
-            >
-              ✕
-            </button>
-            <div className="mb-6 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Before you start</p>
-              <h2 className="text-2xl font-semibold text-gray-900">Share a few details</h2>
-              <p className="text-sm text-gray-500">We&apos;ll use this so Movo can personalize the conversation.</p>
-            </div>
-            <form onSubmit={handleVapiPrefillSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="vapi-name"
-                  className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500"
-                >
-                  Name
-                </label>
-                <input
-                  id="vapi-name"
-                  type="text"
-                  value={vapiUserInfo.name}
-                  onChange={(e) => setVapiUserInfo({ ...vapiUserInfo, name: e.target.value })}
-                  placeholder="Alex Johnson"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="vapi-email"
-                  className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500"
-                >
-                  Email
-                </label>
-                <input
-                  id="vapi-email"
-                  type="email"
-                  value={vapiUserInfo.email}
-                  onChange={(e) => setVapiUserInfo({ ...vapiUserInfo, email: e.target.value })}
-                  placeholder="you@academy.com"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="vapi-phone"
-                  className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500"
-                >
-                  Phone
-                </label>
-                <input
-                  id="vapi-phone"
-                  type="tel"
-                  value={vapiUserInfo.phone}
-                  onChange={(e) => setVapiUserInfo({ ...vapiUserInfo, phone: e.target.value })}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/5"
-                  required
-                />
-              </div>
-              <div className="flex items-start gap-3">
-                <input
-                  id="vapi-consent"
-                  type="checkbox"
-                  checked={vapiConsentChecked}
-                  onChange={(e) => setVapiConsentChecked(e.target.checked)}
-                  required
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-black focus:ring-2 focus:ring-black/20 cursor-pointer"
-                />
-                <label htmlFor="vapi-consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
-                  I agree to receive automated SMS messages from Movo AI related to my inquiry or reservation. Message
-                  and data rates may apply. Frequency varies. Reply STOP to opt out or HELP for help. Consent is not a
-                  condition of purchase. You also agree to our{" "}
-                  <a href="/privacy" className="underline decoration-gray-300 underline-offset-4 hover:text-gray-600">
-                    Privacy Policy
-                  </a>{" "}
-                  and our{" "}
-                  <a href="/terms" className="underline decoration-gray-300 underline-offset-4 hover:text-gray-600">
-                    Terms of Service
-                  </a>
-                  .
-                </label>
-              </div>
-              <button
-                type="submit"
-                disabled={!vapiConsentChecked}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-black px-4 py-3 text-sm font-medium text-white shadow-lg shadow-black/10 transition hover:bg-black/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue to call
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+
       {/* Error notification toast */}
       {webCallError && !isWebCallActive && !isWebCallConnecting && (
         <div className="fixed bottom-24 right-6 z-50 max-w-sm rounded-lg bg-rose-500/90 text-white px-4 py-3 text-sm shadow-lg backdrop-blur-sm border border-rose-400/20">
@@ -2238,6 +2087,25 @@ export default function Home() {
           </div>
         </div>
       )}
+      {/* Hidden audio element for "Hear Movo in Action" button */}
+      <audio
+        ref={audioRef} // Changed from heroAudioRef to audioRef for general audio playback
+        {...(hearMovoAudioUrl && { src: hearMovoAudioUrl })}
+        onTimeUpdate={() => {
+          if (audioRef.current) {
+            // Ensure audioRef.current is not null and duration is valid before calculating progress
+            if (!audioRef.current || isNaN(audioRef.current.duration) || audioRef.current.duration === 0) return
+            const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100
+            setAudioProgress(progress)
+          }
+        }}
+        onEnded={() => {
+          setIsPlaying(false)
+          setAudioProgress(0)
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        controlsList="nodownload"
+      />
     </>
   )
 }
