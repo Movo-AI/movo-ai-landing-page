@@ -70,11 +70,18 @@ export default function RootLayout({
     <html lang="en" className="overflow-x-hidden">
       <head>
         {process.env.NODE_ENV === "production" && (
-          <Script
-            id="warmly-script-loader"
-            src="https://opps-widget.getwarmly.com/warmly.js?clientId=ce6fb70f7dbeb5a4e6315f9069535677"
-            strategy="afterInteractive"
-          />
+          <>
+            <Script
+              id="warmly-script-loader"
+              src="https://opps-widget.getwarmly.com/warmly.js?clientId=ce6fb70f7dbeb5a4e6315f9069535677"
+              strategy="afterInteractive"
+            />
+            <Script
+              id="midbound-script-loader"
+              src="https://px.midbound.ai/cmidmjuyy0001s601fj8m5nyt"
+              strategy="afterInteractive"
+            />
+          </>
         )}
       </head>
       <body
