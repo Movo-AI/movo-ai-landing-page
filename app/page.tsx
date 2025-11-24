@@ -1503,7 +1503,7 @@ export default function Home() {
                       Handled by Movo
                     </div>
                     <div className="mt-3 md:mt-4 text-center text-xs md:text-sm text-gray-600">
-                      247 calls answered this month
+                      8,047 calls answered this month
                     </div>
                   </div>
                 </div>
