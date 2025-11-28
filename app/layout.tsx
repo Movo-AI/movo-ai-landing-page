@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     siteName: "Movo AI",
     images: [
       {
-        url: "/movo-og-image.jpg",
+        url: "https://movoai.co/movo-og-image.png",
         width: 1200,
         height: 630,
         alt: "Movo AI - The AI Platform for Sports Academies",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Movo AI - The AI Platform for Sports Academies",
     description: "Movo calls every parent, books enrollments, and grows your revenue - automatically.",
-    images: ["/movo-og-image.jpg"],
+    images: ["https://movoai.co/movo-og-image.png"],
   },
   generator: "v0.app",
   icons: {
