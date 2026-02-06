@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react";
 
 export function MovoFinalCTA() {
-  const [isVisible, setIsVisible] = useState(false)
-  const sectionRef = useRef<HTMLElement>(null)
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
       if (sectionRef.current) {
-        const rect = sectionRef.current.getBoundingClientRect()
+        const rect = sectionRef.current.getBoundingClientRect();
         if (rect.top < window.innerHeight - 150) {
-          setIsVisible(true)
+          setIsVisible(true);
         }
       }
-    }
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    handleScroll() // Check on mount
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Check on mount
 
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <section
@@ -42,7 +42,8 @@ export function MovoFinalCTA() {
       <div
         className="absolute inset-0 z-0"
         style={{
-          background: "linear-gradient(180deg, rgba(15,10,50,0.8) 0%, rgba(15,10,50,0.6) 60%, rgba(15,10,50,0.9) 100%)",
+          background:
+            "linear-gradient(180deg, rgba(15,10,50,0.8) 0%, rgba(15,10,50,0.6) 60%, rgba(15,10,50,0.9) 100%)",
         }}
       />
 
@@ -64,7 +65,8 @@ export function MovoFinalCTA() {
           }`}
           style={{ color: "#E8E8EE" }}
         >
-          Stop missing calls. Let Movo handle your academy's communication — 24/7, in your tone, with zero missed leads.
+          Stop missing calls. Let Movo handle your academy's communication —
+          24/7, in your tone, with zero missed leads.
         </p>
 
         {/* CTA Buttons */}
@@ -74,7 +76,7 @@ export function MovoFinalCTA() {
           }`}
         >
           <a
-            href="https://calendly.com/ari-movoai/30min"
+            href="https://calendly.com/ari-movo/30min"
             target="_blank"
             rel="noopener noreferrer"
             className="px-9 py-4 bg-primary text-white rounded-xl font-semibold text-lg uppercase transition-all hover:scale-105 hover:brightness-110"
@@ -82,7 +84,7 @@ export function MovoFinalCTA() {
             Book a walkthrough
           </a>
           <a
-            href="https://calendly.com/ari-movoai/30min"
+            href="https://calendly.com/ari-movo/30min"
             target="_blank"
             rel="noopener noreferrer"
             className="px-9 py-4 bg-transparent border-2 border-white text-white rounded-xl font-semibold text-lg uppercase transition-all hover:scale-105 hover:bg-white hover:text-primary"
@@ -98,9 +100,10 @@ export function MovoFinalCTA() {
           }`}
           style={{ color: "#C8C8D8" }}
         >
-          Join academies like MPAC Sports already using Movo to stay always connected.
+          Join academies like MPAC Sports already using Movo to stay always
+          connected.
         </p>
       </div>
     </section>
-  )
+  );
 }

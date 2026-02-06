@@ -1,42 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server"
 
 interface SlackNotificationPayload {
-  call_id: string;
-  name: string;
-  email: string;
-  phone: string;
-  email_domain: string;
-  phone_country_code: string;
-  first_name: string;
+  call_id: string
+  name: string
+  email: string
+  phone: string
+  email_domain: string
+  phone_country_code: string
+  first_name: string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SlackNotificationPayload = await request.json();
-    const {
-      call_id,
-      name,
-      email,
-      phone,
-      email_domain,
-      phone_country_code,
-      first_name,
-    } = body;
+    const body: SlackNotificationPayload = await request.json()
+    const { call_id, name, email, phone, email_domain, phone_country_code, first_name } = body
 
-    // Get Slack webhook URL from environment variable
-    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL
 
     if (!slackWebhookUrl) {
-      console.warn(
-        "[Slack] SLACK_WEBHOOK_URL not set, skipping Slack notification"
-      );
+      console.warn("[Slack] SLACK_WEBHOOK_URL not set, skipping Slack notification")
       return NextResponse.json(
         { success: true, skipped: true, reason: "webhook_not_configured" },
-        { status: 200 }
-      );
+        { status: 200 },
+      )
     }
 
-    // Create Slack message payload
     const slackMessage = {
       text: "📞 New Call Request from Movo Landing Page",
       blocks: [
@@ -89,46 +77,37 @@ export async function POST(request: NextRequest) {
           elements: [
             {
               type: "mrkdwn",
-              text: `🕐 <!date^${Math.floor(
-                Date.now() / 1000
-              )}^{date_short_pretty} at {time}|${new Date().toLocaleString()}>`,
+              text: `🕐 <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toLocaleString()}>`,
             },
           ],
         },
       ],
-    };
+    }
 
-    // Send to Slack
     const response = await fetch(slackWebhookUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(slackMessage),
-    });
+    })
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        "[Slack] Failed to send notification:",
-        response.status,
-        errorText
-      );
+      const errorText = await response.text()
+      console.error("[Slack] Failed to send notification:", response.status, errorText)
       return NextResponse.json(
         { error: "Failed to send Slack notification" },
-        { status: response.status }
-      );
+        { status: response.status },
+      )
     }
 
-    console.log("[Slack] Notification sent successfully");
-    return NextResponse.json({ success: true }, { status: 200 });
+    console.log("[Slack] Notification sent successfully")
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    console.error("[Slack] Error sending notification:", error);
+    console.error("[Slack] Error sending notification:", error)
     return NextResponse.json(
-      {
-        error: "An unexpected error occurred while sending Slack notification",
-      },
-      { status: 500 }
-    );
+      { error: "An unexpected error occurred while sending Slack notification" },
+      { status: 500 },
+    )
   }
 }

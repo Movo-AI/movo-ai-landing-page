@@ -1,28 +1,28 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export function MovoPlatform() {
-  const [isVisible, setIsVisible] = useState(false)
-  const [imageVisible, setImageVisible] = useState(false)
-  const sectionRef = useRef<HTMLElement>(null)
+  const [isVisible, setIsVisible] = useState(false);
+  const [imageVisible, setImageVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
       if (sectionRef.current) {
-        const rect = sectionRef.current.getBoundingClientRect()
+        const rect = sectionRef.current.getBoundingClientRect();
         if (rect.top < window.innerHeight - 150 && !isVisible) {
-          setIsVisible(true)
-          setTimeout(() => setImageVisible(true), 200)
+          setIsVisible(true);
+          setTimeout(() => setImageVisible(true), 200);
         }
       }
-    }
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    handleScroll() // Check on mount
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [isVisible])
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Check on mount
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isVisible]);
 
   return (
     <section
@@ -42,8 +42,9 @@ export function MovoPlatform() {
             </h2>
 
             <p className="text-lg text-[#555] leading-relaxed">
-              Your Movo dashboard shows every conversation — who called, what they asked, and what happened next. Follow
-              up instantly or let Movo close the loop for you.
+              Your Movo dashboard shows every conversation — who called, what
+              they asked, and what happened next. Follow up instantly or let
+              Movo close the loop for you.
             </p>
 
             <ul className="space-y-3">
@@ -70,7 +71,11 @@ export function MovoPlatform() {
               size="lg"
               className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg rounded-lg shadow-lg hover:shadow-xl transition-all"
             >
-              <a href="https://calendly.com/ari-movoai/30min" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://calendly.com/ari-movo/30min"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 See the Dashboard
               </a>
             </Button>
@@ -78,7 +83,9 @@ export function MovoPlatform() {
 
           <div
             className={`relative transition-all duration-700 delay-200 ${
-              imageVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
+              imageVisible
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 translate-x-8"
             }`}
           >
             <div className="relative rounded-2xl overflow-hidden shadow-2xl">
@@ -93,5 +100,5 @@ export function MovoPlatform() {
         </div>
       </div>
     </section>
-  )
+  );
 }
