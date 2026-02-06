@@ -12,13 +12,14 @@ export function Hero() {
               </h1>
 
               <p className="font-sans text-lg md:text-xl lg:text-2xl leading-relaxed text-pretty max-w-2xl text-muted-foreground">
-                The AI receptionist for sports academies — fluent in your programs, pricing, and tone. Answers every
-                parent call 24/7, on the court, in the car, or finally off the clock.
+                The AI receptionist for sports academies — fluent in your
+                programs, pricing, and tone. Answers every parent call 24/7, on
+                the court, in the car, or finally off the clock.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <a
-                  href="https://calendly.com/ari-movoai/30min"
+                  href="https://calendly.com/ari-movo/30min"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-accent hover:bg-accent-secondary text-accent-foreground font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl text-lg"
@@ -72,7 +73,11 @@ export function Hero() {
                 xmlns="http://www.w3.org/2000/svg"
               >
                 {/* Basketball player outline */}
-                <g stroke="currentColor" strokeWidth="2" className="text-foreground/30">
+                <g
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-foreground/30"
+                >
                   {/* Head */}
                   <circle cx="200" cy="80" r="25" />
                   {/* Body */}
@@ -91,15 +96,39 @@ export function Hero() {
                 </g>
 
                 {/* Accent elements */}
-                <circle cx="100" cy="100" r="3" fill="currentColor" className="text-accent" />
-                <circle cx="300" cy="120" r="3" fill="currentColor" className="text-accent" />
-                <circle cx="120" cy="300" r="3" fill="currentColor" className="text-accent" />
-                <circle cx="320" cy="280" r="3" fill="currentColor" className="text-accent" />
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="3"
+                  fill="currentColor"
+                  className="text-accent"
+                />
+                <circle
+                  cx="300"
+                  cy="120"
+                  r="3"
+                  fill="currentColor"
+                  className="text-accent"
+                />
+                <circle
+                  cx="120"
+                  cy="300"
+                  r="3"
+                  fill="currentColor"
+                  className="text-accent"
+                />
+                <circle
+                  cx="320"
+                  cy="280"
+                  r="3"
+                  fill="currentColor"
+                  className="text-accent"
+                />
               </svg>
             </div>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }
