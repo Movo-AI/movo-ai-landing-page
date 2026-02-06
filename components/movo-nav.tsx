@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 
 export function MovoNav() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <nav
@@ -25,11 +25,14 @@ export function MovoNav() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-3">
-          <a href="#hear" className="text-white font-semibold opacity-90 hover:opacity-100 transition-opacity">
+          <a
+            href="#hear"
+            className="text-white font-semibold opacity-90 hover:opacity-100 transition-opacity"
+          >
             🎧 Hear a Call
           </a>
           <a
-            href="https://calendly.com/ari-movoai/30min"
+            href="https://calendly.com/ari-movo/30min"
             target="_blank"
             rel="noopener noreferrer"
             className="relative overflow-hidden px-[22px] py-[14px] text-white rounded-[12px] font-semibold transition-all hover:-translate-y-0.5"
@@ -38,10 +41,12 @@ export function MovoNav() {
               boxShadow: "0 12px 34px rgba(126,100,255,0.35)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = "0 16px 40px rgba(126,100,255,0.45)"
+              e.currentTarget.style.boxShadow =
+                "0 16px 40px rgba(126,100,255,0.45)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = "0 12px 34px rgba(126,100,255,0.35)"
+              e.currentTarget.style.boxShadow =
+                "0 12px 34px rgba(126,100,255,0.35)";
             }}
           >
             🚀 Book a Demo
@@ -49,12 +54,30 @@ export function MovoNav() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button className="md:hidden p-2 text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button
+          className="md:hidden p-2 text-white"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             {mobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             )}
           </svg>
         </button>
@@ -67,7 +90,7 @@ export function MovoNav() {
             🎧 Hear a Call
           </a>
           <a
-            href="https://calendly.com/ari-movoai/30min"
+            href="https://calendly.com/ari-movo/30min"
             target="_blank"
             rel="noopener noreferrer"
             className="px-[22px] py-[14px] text-white rounded-[12px] font-semibold text-center"
@@ -81,5 +104,5 @@ export function MovoNav() {
         </div>
       )}
     </nav>
-  )
+  );
 }

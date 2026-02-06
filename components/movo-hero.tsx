@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export function MovoHero() {
   return (
@@ -15,7 +15,8 @@ export function MovoHero() {
       <div
         className="absolute left-[55%] bottom-[120px] w-[360px] h-[360px] rounded-full z-0"
         style={{
-          background: "radial-gradient(circle, rgba(126,100,255,0.55) 0%, rgba(126,100,255,0) 70%)",
+          background:
+            "radial-gradient(circle, rgba(126,100,255,0.55) 0%, rgba(126,100,255,0) 70%)",
           filter: "blur(6px)",
           animation: "pulse 5s ease-in-out infinite",
         }}
@@ -60,7 +61,7 @@ export function MovoHero() {
 
         <div className="flex gap-3 flex-wrap mt-[18px]">
           <a
-            href="https://calendly.com/ari-movoai/30min"
+            href="https://calendly.com/ari-movo/30min"
             target="_blank"
             rel="noopener noreferrer"
             className="relative overflow-hidden px-[22px] py-[14px] text-white rounded-[12px] font-semibold transition-all hover:-translate-y-0.5"
@@ -69,17 +70,19 @@ export function MovoHero() {
               boxShadow: "0 12px 34px rgba(126,100,255,0.35)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = "0 16px 40px rgba(126,100,255,0.45)"
+              e.currentTarget.style.boxShadow =
+                "0 16px 40px rgba(126,100,255,0.45)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = "0 12px 34px rgba(126,100,255,0.35)"
+              e.currentTarget.style.boxShadow =
+                "0 12px 34px rgba(126,100,255,0.35)";
             }}
           >
             🎧 Hear Movo Answer a Parent Call
           </a>
 
           <a
-            href="https://calendly.com/ari-movoai/30min"
+            href="https://calendly.com/ari-movo/30min"
             target="_blank"
             rel="noopener noreferrer"
             className="px-[22px] py-[14px] text-white rounded-[12px] font-semibold border-2 transition-all"
@@ -88,10 +91,10 @@ export function MovoHero() {
               background: "transparent",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)"
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent"
+              e.currentTarget.style.background = "transparent";
             }}
           >
             🚀 Book a Demo
@@ -99,5 +102,5 @@ export function MovoHero() {
         </div>
       </div>
     </section>
-  )
+  );
 }
