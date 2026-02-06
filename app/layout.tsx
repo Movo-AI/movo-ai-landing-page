@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { Geist } from "next/font/google"
 import { Playfair_Display, Caveat } from "next/font/google"
 import Script from "next/script"
+import { Suspense } from "react"
+import { PostHogProvider } from "@/components/posthog-provider"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -26,9 +28,36 @@ const caveat = Caveat({
 export const metadata: Metadata = {
   title: "Movo AI - The AI Platform for Sports Academies",
   description: "Turn missed calls into enrollments with AI phone reps",
+  metadataBase: new URL("https://movoai.co"),
+  openGraph: {
+    title: "Movo AI - The AI Platform for Sports Academies",
+    description: "Movo calls every parent, books enrollments, and grows your revenue - automatically.",
+    url: "https://movoai.co",
+    siteName: "Movo AI",
+    images: [
+      {
+        url: "https://movoai.co/movo-og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Movo AI - The AI Platform for Sports Academies",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Movo AI - The AI Platform for Sports Academies",
+    description: "Movo calls every parent, books enrollments, and grows your revenue - automatically.",
+    images: ["https://movoai.co/movo-og-image.png"],
+  },
   generator: "v0.app",
   icons: {
-    icon: "/movo-icon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 }
 
@@ -38,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-x-hidden">
       <head>
         {process.env.NODE_ENV === "production" && (
           <Script
@@ -48,7 +77,13 @@ export default function RootLayout({
           />
         )}
       </head>
-      <body className={`${geistSans.variable} ${playfair.variable} ${caveat.variable} font-sans`}>{children}</body>
+      <body
+        className={`${geistSans.variable} ${playfair.variable} ${caveat.variable} font-sans overflow-x-hidden max-w-full`}
+      >
+        <Suspense fallback={null}>
+          <PostHogProvider>{children}</PostHogProvider>
+        </Suspense>
+      </body>
     </html>
   )
 }
