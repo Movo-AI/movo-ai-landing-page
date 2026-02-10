@@ -832,6 +832,38 @@ export default function Home() {
             first_name: firstName,
             email_address: vapiUserInfo.email,
           },
+          hooks: [
+            {
+              do: [{ type: "say", exact: [`${firstName}?`] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_1",
+              options: {
+                timeoutSeconds: 7,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+            {
+              do: [{ type: "say", exact: [`${firstName}, you there?`] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_2",
+              options: {
+                timeoutSeconds: 14,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+            {
+              do: [{ type: "say", exact: ["Did I scare you off?"] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_3",
+              options: {
+                timeoutSeconds: 21,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+          ],
         })
         .catch((error: any) => {
           console.error("[Vapi] Error starting web call:", error);
