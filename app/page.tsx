@@ -827,7 +827,7 @@ export default function Home() {
       }
 
       vapiRef.current
-        .start("1baa4c19-196c-4c3f-ba9e-821035d17853", {
+        .start("feec65f6-3921-4258-94e4-524af06ac1ff", {
           variableValues: {
             first_name: firstName,
             email_address: vapiUserInfo.email,
