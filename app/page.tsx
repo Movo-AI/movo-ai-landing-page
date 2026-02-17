@@ -361,10 +361,10 @@ export default function Home() {
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  from: "ari@movoai.co",
+                  from: "ari@trymovo.ai",
                   fromName: "Ari Posner",
                   templateId: "d-7637fbd58f1e4463a93cc96ced411788",
-                  cc: "ari@movoai.co",
+                  cc: "ari@trymovo.ai",
                   to: callInfo.email,
                   dynamicTemplateData: {
                     first_name: firstName,
