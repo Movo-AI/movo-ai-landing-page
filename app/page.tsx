@@ -121,7 +121,7 @@ export default function Home() {
     elementType: string,
     elementText: string,
     section: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ) => {
     // Removed posthog.capture call
   };
@@ -144,10 +144,10 @@ export default function Home() {
         // Fetch audio data but don't create URLs yet - keep as blobs in memory
         const [learnResponse, hearResponse] = await Promise.all([
           fetch(
-            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3"
+            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3",
           ),
           fetch(
-            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3"
+            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3",
           ),
         ]);
 
@@ -166,7 +166,7 @@ export default function Home() {
   const playProtectedAudio = (
     audioType: "learn" | "hearMovo",
     refToUse: React.MutableRefObject<HTMLAudioElement | null>,
-    setPlayingState: (playing: boolean) => void
+    setPlayingState: (playing: boolean) => void,
   ) => {
     const blob =
       audioType === "learn"
@@ -231,7 +231,7 @@ export default function Home() {
       try {
         // Fetch and create blob URL for "See Movo learn in action"
         const learnResponse = await fetch(
-          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3"
+          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3",
         );
         const learnBlob = await learnResponse.blob();
         const learnUrl = URL.createObjectURL(learnBlob);
@@ -239,7 +239,7 @@ export default function Home() {
 
         // Fetch and create blob URL for "Hear Movo in Action"
         const hearResponse = await fetch(
-          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3"
+          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3",
         );
         const hearBlob = await hearResponse.blob();
         const hearUrl = URL.createObjectURL(hearBlob);
@@ -370,7 +370,7 @@ export default function Home() {
                     first_name: firstName,
                   },
                 }),
-              }
+              },
             ).catch((error) => {
               console.error("[Email API] Failed to send email:", error);
             });
@@ -448,7 +448,7 @@ export default function Home() {
       } catch (err) {
         console.error("[Vapi] Failed to initialize Web SDK:", err);
         setWebCallError(
-          "Unable to initialize the call experience. Please try again later."
+          "Unable to initialize the call experience. Please try again later.",
         );
       }
     }
@@ -478,7 +478,7 @@ export default function Home() {
               // Ignore errors when removing listeners
               console.warn(
                 `[Vapi] Failed to remove listener for ${event}:`,
-                err
+                err,
               );
             }
           });
@@ -654,7 +654,7 @@ export default function Home() {
       .join(" ");
     if (containsUnsafeLanguage(submittedText)) {
       setCallError(
-        "We couldn't process your request. Please remove unsafe language and try again."
+        "We couldn't process your request. Please remove unsafe language and try again.",
       );
       // Removed posthog.capture call
       return;
@@ -739,7 +739,7 @@ export default function Home() {
       setCallError(
         error instanceof Error
           ? error.message
-          : "Failed to initiate call. Please try again."
+          : "Failed to initiate call. Please try again.",
       );
       setIsCallConnecting(false);
       setIsCallActive(false);
@@ -809,7 +809,7 @@ export default function Home() {
     }).catch((error) => {
       console.error(
         "Failed to send Slack notification for Vapi prefill:",
-        error
+        error,
       );
     });
 
@@ -817,7 +817,7 @@ export default function Home() {
     try {
       if (!vapiRef.current) {
         console.error(
-          "[Vapi] Web SDK instance not available when starting call"
+          "[Vapi] Web SDK instance not available when starting call",
         );
         setWebCallError(normalizeCallError({ message: "SDK not available" }));
         setIsWebCallConnecting(false);
@@ -827,7 +827,7 @@ export default function Home() {
       }
 
       vapiRef.current
-        .start("feec65f6-3921-4258-94e4-524af06ac1ff", {
+        .start("1baa4c19-196c-4c3f-ba9e-821035d17853", {
           variableValues: {
             first_name: firstName,
             email_address: vapiUserInfo.email,
@@ -964,7 +964,7 @@ export default function Home() {
   useEffect(() => {
     // Dummy calculation for now, replace with actual logic if needed
     setCalculatedRevenue(
-      (missedCalls * (conversionRate / 100) * avgEnrollment) / 1000
+      (missedCalls * (conversionRate / 100) * avgEnrollment) / 1000,
     );
   }, [missedCalls, conversionRate, avgEnrollment]);
 
@@ -1030,7 +1030,7 @@ export default function Home() {
           "[v0] Dashboard intersection:",
           entry.isIntersecting,
           "Already visible:",
-          isDashboardVisible
+          isDashboardVisible,
         );
 
         if (entry.isIntersecting && !isDashboardVisible) {
@@ -1106,7 +1106,7 @@ export default function Home() {
 
     const observer = new IntersectionObserver(
       animateDashboard,
-      observerOptions
+      observerOptions,
     );
     if (dashboardRef.current) {
       console.log("[v0] Observer attached to dashboard");
@@ -1250,10 +1250,10 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-12 lg:gap-16">
               {[
                 "Elite Baseball Academy",
-                "MPAC Sports",
+                "All Star Sports Academy",
                 "Haifa Swim",
                 "Supreme Hoops",
-                "Champion Tennis",
+                "Pacific Reign",
               ].map((name, i) => (
                 <span
                   key={i}
@@ -1306,8 +1306,8 @@ export default function Home() {
             webCallError && !isWebCallActive
               ? "bg-rose-500/90 hover:bg-rose-600 text-white"
               : isWebCallActive
-              ? "bg-rose-500/90 hover:bg-rose-600 text-white"
-              : "bg-black/80 hover:bg-black text-white"
+                ? "bg-rose-500/90 hover:bg-rose-600 text-white"
+                : "bg-black/80 hover:bg-black text-white"
           }`}
         >
           {isWebCallActive ? (
@@ -1440,7 +1440,7 @@ export default function Home() {
                   playProtectedAudio(
                     "learn",
                     learnVideoRef,
-                    setIsLearnVideoPlaying
+                    setIsLearnVideoPlaying,
                   )
                 }
                 className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
@@ -1835,7 +1835,8 @@ export default function Home() {
                   them to interested parents - until they're full.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500">
-                  "It actually sells my classes for me" - MPAC Sports
+                  "It actually sells my classes for me" - Elite Baseball
+                  Training
                 </p>
               </div>
 

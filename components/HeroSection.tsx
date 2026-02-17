@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Image from "next/image"
-import Link from "next/link"
+import Image from "next/image";
+import Link from "next/link";
 
 export default function HeroSection() {
   return (
@@ -17,9 +17,14 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-t from-[#00000020] via-[#00000008] to-transparent" />
 
       <header className="absolute top-0 left-0 right-0 flex justify-between items-center px-8 py-6 z-20">
-        <div className="text-[20px] font-bold tracking-tight text-[#1A1A1A]">MOVO</div>
+        <div className="text-[20px] font-bold tracking-tight text-[#1A1A1A]">
+          MOVO
+        </div>
         <nav className="flex items-center space-x-6">
-          <Link href="#how-it-works" className="text-sm font-medium text-[#1A1A1A]/80 hover:text-[#1A1A1A]">
+          <Link
+            href="#how-it-works"
+            className="text-sm font-medium text-[#1A1A1A]/80 hover:text-[#1A1A1A]"
+          >
             How It Works
           </Link>
           <Link
@@ -39,8 +44,8 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-[17px] md:text-[18px] leading-relaxed text-[#2E2E2E] mb-8">
-            Every missed call is a missed enrollment. Movo answers instantly — in your voice. Books trials, sends
-            payment links, and never sleeps.
+            Every missed call is a missed enrollment. Movo answers instantly —
+            in your voice. Books trials, sends payment links, and never sleeps.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -53,7 +58,8 @@ export default function HeroSection() {
           </div>
 
           <p className="text-xs text-[#6B6B6B] mt-6">
-            Trusted by leading academies like <strong>MPAC Sports</strong>.
+            Trusted by leading academies like{" "}
+            <strong>All Star Sports Academy</strong>.
           </p>
         </div>
 
@@ -70,5 +76,5 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }
