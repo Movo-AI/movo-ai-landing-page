@@ -1,37 +1,272 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useRef } from "react"
-import { Phone, Play, Pause } from "lucide-react"
-import { Header } from "@/components/header"
-import { ProblemSection } from "@/components/problem-section"
-import { WhoItsFor } from "@/components/who-its-for"
-import { HowItWorks } from "@/components/how-it-works"
-import { UseCaseStory } from "@/components/use-case-story"
-import { LiveActivity } from "@/components/live-activity"
-import { FinalCTA } from "@/components/final-cta"
-import { SuccessStoriesSection } from "@/components/success-stories-section"
+import { useState, useEffect, useRef } from "react";
+import { Phone, Pause, Play } from "lucide-react";
+import { Header } from "@/components/header";
+import { ProblemSection } from "@/components/problem-section";
+import { WhoItsFor } from "@/components/who-its-for";
+import { HowItWorks } from "@/components/how-it-works";
+import { UseCaseStory } from "@/components/use-case-story";
+import { LiveActivity } from "@/components/live-activity";
+import { FinalCTA } from "@/components/final-cta";
+import { SuccessStoriesSection } from "@/components/success-stories-section";
+import { containsUnsafeLanguage } from "@/lib/moderation";
 
 export default function Home() {
-  const [showCallMe, setShowCallMe] = useState(false)
-  const [showHearMovo, setShowHearMovo] = useState(false)
-  const [showCalculator, setShowCalculator] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isHeroAudioPlaying, setIsHeroAudioPlaying] = useState(false)
-  const [isLearnVideoPlaying, setIsLearnVideoPlaying] = useState(false)
-  const learnVideoRef = useRef<HTMLAudioElement>(null)
-  const heroAudioRef = useRef<HTMLAudioElement>(null)
-  const [audioProgress, setAudioProgress] = useState(0)
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const [showCallMe, setShowCallMe] = useState(false);
+  const [showHearMovo, setShowHearMovo] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isHeroAudioPlaying, setIsHeroAudioPlaying] = useState(false);
+  const [isLearnVideoPlaying, setIsLearnVideoPlaying] = useState(false);
 
-  const [isPhonePlaying, setIsPhonePlaying] = useState(false)
-  const [phoneAudioProgress, setPhoneAudioProgress] = useState(0)
-  const phoneAudioRef = useRef<HTMLAudioElement>(null)
+  const [isCallConnecting, setIsCallConnecting] = useState(false);
+  const [isCallActive, setIsCallActive] = useState(false);
 
-  const [activePillar, setActivePillar] = useState<"multi-channel" | "payment" | "learning">("multi-channel")
+  // Web call via Vapi Web SDK
+  const [isWebCallConnecting, setIsWebCallConnecting] = useState(false);
+  const [isWebCallActive, setIsWebCallActive] = useState(false);
+  const [webCallError, setWebCallError] = useState<string | null>(null);
+  const [webTranscripts, setWebTranscripts] = useState<
+    { role: string; text: string; id: number }[]
+  >([]);
+  const vapiRef = useRef<any | null>(null);
+  const vapiEventHandlersRef = useRef<
+    { event: string; handler: (...args: any[]) => void }[]
+  >([]);
+  const vapiCallInfoRef = useRef<{ email: string; name: string } | null>(null); // Store email and name for the current pending call
+  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
+  const assistantSpeakingTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  // Normalize error messages to be human-readable
+  const normalizeCallError = (error: any): string => {
+    if (!error) {
+      return "Unable to start the call. Please try again.";
+    }
+
+    const errorMessage = error?.message || error?.toString() || "";
+    const errorString = errorMessage.toLowerCase();
+
+    // Network/connection errors
+    if (
+      errorString.includes("network") ||
+      errorString.includes("fetch") ||
+      errorString.includes("connection") ||
+      errorString.includes("failed to fetch")
+    ) {
+      return "Connection failed. Please check your internet connection and try again.";
+    }
+
+    // Permission/access errors
+    if (
+      errorString.includes("permission") ||
+      errorString.includes("access") ||
+      errorString.includes("unauthorized") ||
+      errorString.includes("forbidden")
+    ) {
+      return "Unable to access your microphone. Please check your browser permissions and try again.";
+    }
+
+    // SDK/initialization errors
+    if (
+      errorString.includes("sdk") ||
+      errorString.includes("not available") ||
+      errorString.includes("not initialized")
+    ) {
+      return "Unable to initialize the call. Please refresh the page and try again.";
+    }
+
+    // Timeout errors
+    if (errorString.includes("timeout") || errorString.includes("timed out")) {
+      return "The call took too long to connect. Please try again.";
+    }
+
+    // Rate limiting
+    if (
+      errorString.includes("rate limit") ||
+      errorString.includes("too many requests")
+    ) {
+      return "Too many requests. Please wait a moment and try again.";
+    }
+
+    // Generic API errors
+    if (
+      errorString.includes("bad request") ||
+      errorString.includes("400") ||
+      errorString.includes("500") ||
+      errorString.includes("server error")
+    ) {
+      return "Something went wrong on our end. Please try again in a moment.";
+    }
+
+    // Default fallback
+    return "Unable to start the call. Please try again.";
+  };
+
+  // Prefill info before allowing Vapi widget usage
+  const [showVapiPrefill, setShowVapiPrefill] = useState(false);
+  const [hasVapiAccess, setHasVapiAccess] = useState(false);
+  const [vapiUserInfo, setVapiUserInfo] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [vapiConsentChecked, setVapiConsentChecked] = useState(true); // CHANGE: Set consent checkbox to checked by default
+
+  const trackClick = (
+    elementType: string,
+    elementText: string,
+    section: string,
+    metadata?: Record<string, any>,
+  ) => {
+    // Removed posthog.capture call
+  };
+  const learnVideoRef = useRef<HTMLAudioElement | null>(null);
+  const heroAudioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioProgress, setAudioProgress] = useState(0);
+
+  const audioDataRef = useRef<{
+    learnAudio: Blob | null;
+    hearMovoAudio: Blob | null;
+  }>({
+    learnAudio: null,
+    hearMovoAudio: null,
+  });
+
+  useEffect(() => {
+    const loadProtectedAudio = async () => {
+      try {
+        // Fetch audio data but don't create URLs yet - keep as blobs in memory
+        const [learnResponse, hearResponse] = await Promise.all([
+          fetch(
+            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3",
+          ),
+          fetch(
+            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3",
+          ),
+        ]);
+
+        audioDataRef.current = {
+          learnAudio: await learnResponse.blob(),
+          hearMovoAudio: await hearResponse.blob(),
+        };
+      } catch (error) {
+        console.error("[v0] Error loading audio:", error);
+      }
+    };
+
+    loadProtectedAudio();
+  }, []);
+
+  const playProtectedAudio = (
+    audioType: "learn" | "hearMovo",
+    refToUse: React.MutableRefObject<HTMLAudioElement | null>,
+    setPlayingState: (playing: boolean) => void,
+  ) => {
+    const blob =
+      audioType === "learn"
+        ? audioDataRef.current.learnAudio
+        : audioDataRef.current.hearMovoAudio;
+
+    if (!blob) return;
+
+    // If already playing, pause and clean up
+    if (refToUse.current) {
+      refToUse.current.pause();
+      const oldUrl = refToUse.current.src;
+      refToUse.current.src = "";
+      refToUse.current.remove();
+      refToUse.current = null;
+      if (oldUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(oldUrl);
+      }
+      setPlayingState(false);
+      return;
+    }
+
+    // Create temporary audio element dynamically
+    const audio = new Audio();
+    const blobUrl = URL.createObjectURL(blob);
+
+    audio.src = blobUrl;
+    audio.oncontextmenu = (e) => e.preventDefault();
+
+    audio.onended = () => {
+      setPlayingState(false);
+      URL.revokeObjectURL(blobUrl);
+      audio.remove();
+      refToUse.current = null;
+    };
+
+    if (audioType === "hearMovo") {
+      audio.ontimeupdate = () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+          const progress = (audio.currentTime / audio.duration) * 100;
+          setAudioProgress(progress);
+        }
+      };
+    }
+
+    refToUse.current = audio;
+    audio.play().catch((err) => {
+      console.error("[v0] Playback error:", err);
+      setPlayingState(false);
+      URL.revokeObjectURL(blobUrl);
+      audio.remove();
+      refToUse.current = null;
+    });
+    setPlayingState(true);
+  };
+
+  const [hearMovoAudioUrl, setHearMovoAudioUrl] = useState<string>("");
+  const [learnAudioUrl, setLearnAudioUrl] = useState<string>(""); // Declared setLearnAudioUrl
+
+  useEffect(() => {
+    const createProtectedAudioUrls = async () => {
+      try {
+        // Fetch and create blob URL for "See Movo learn in action"
+        const learnResponse = await fetch(
+          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3",
+        );
+        const learnBlob = await learnResponse.blob();
+        const learnUrl = URL.createObjectURL(learnBlob);
+        setLearnAudioUrl(learnUrl);
+
+        // Fetch and create blob URL for "Hear Movo in Action"
+        const hearResponse = await fetch(
+          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3",
+        );
+        const hearBlob = await hearResponse.blob();
+        const hearUrl = URL.createObjectURL(hearBlob);
+        setHearMovoAudioUrl(hearUrl);
+      } catch (error) {
+        console.error("[v0] Error loading protected audio:", error);
+      }
+    };
+
+    createProtectedAudioUrls();
+
+    // Cleanup blob URLs on unmount
+    return () => {
+      if (learnAudioUrl) URL.revokeObjectURL(learnAudioUrl);
+      if (hearMovoAudioUrl) URL.revokeObjectURL(hearMovoAudioUrl);
+    };
+  }, []);
+
+  const [isPhonePlaying, setIsPhonePlaying] = useState(false);
+  const [phoneAudioProgress, setPhoneAudioProgress] = useState(0);
+  const phoneAudioRef = useRef<HTMLAudioElement>(null);
+
+  const [activePillar, setActivePillar] = useState<
+    "multi-channel" | "payment" | "learning"
+  >("multi-channel");
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const previewQuestions = [
     '"Hi, do you have soccer for 10-year-olds?"',
     '"Can we schedule a trial for this Friday?"',
@@ -39,44 +274,233 @@ export default function Home() {
     '"Is there a discount for siblings?"',
     '"Do you have availability on weekends?"',
     '"Can we try a class before committing?"',
-  ]
+  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentQuestionIndex((prev) => (prev + 1) % previewQuestions.length)
-    }, 3000) // Change question every 3 seconds
-    return () => clearInterval(interval)
-  }, [previewQuestions.length])
+      setCurrentQuestionIndex((prev) => (prev + 1) % previewQuestions.length);
+    }, 3000); // Change question every 3 seconds
+    return () => clearInterval(interval);
+  }, [previewQuestions.length]);
 
-  const [calculatedRevenue, setCalculatedRevenue] = useState(0) // Initialize with a default value or calculate later
-  const [missedCalls, setMissedCalls] = useState(50)
-  const [conversionRate, setConversionRate] = useState(40)
-  const [avgEnrollment, setAvgEnrollment] = useState(600)
+  const [calculatedRevenue, setCalculatedRevenue] = useState(0); // Initialize with a default value or calculate later
+  const [missedCalls, setMissedCalls] = useState(50);
+  const [conversionRate, setConversionRate] = useState(40);
+  const [avgEnrollment, setAvgEnrollment] = useState(600);
 
   const [liveActivities, setLiveActivities] = useState([
-    { city: "Charlotte", action: "Trial booked", time: "2m ago", revenue: "$600" },
-    { city: "Atlanta", action: "Enrollment confirmed", time: "5m ago", revenue: "$1,200" },
-    { city: "Miami", action: "Payment received", time: "8m ago", revenue: "$450" },
-  ])
+    {
+      city: "Charlotte",
+      action: "Trial booked",
+      time: "2m ago",
+      revenue: "$600",
+    },
+    {
+      city: "Atlanta",
+      action: "Enrollment confirmed",
+      time: "5m ago",
+      revenue: "$1,200",
+    },
+    {
+      city: "Miami",
+      action: "Payment received",
+      time: "8m ago",
+      revenue: "$450",
+    },
+  ]);
 
   const [socialProofMessages, setSocialProofMessages] = useState([
     "John from Chicago just booked $1,200 in enrollments",
     "Sarah from Miami confirmed 3 trial sessions",
     "Mike from Dallas recovered $850 from a missed call",
-  ])
-  const [currentProofIndex, setCurrentProofIndex] = useState(0)
+  ]);
+  const [currentProofIndex, setCurrentProofIndex] = useState(0);
 
-  const [callMeForm, setCallMeForm] = useState({ name: "", email: "", phone: "", newsletter: true })
-  const [isSubmittingCall, setIsSubmittingCall] = useState(false)
-  const [callError, setCallError] = useState<string | null>(null)
-  const [callSuccess, setCallSuccess] = useState(false)
+  const [callMeForm, setCallMeForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    assistantId: "",
+    newsletter: true,
+  });
+  const [isSubmittingCall, setIsSubmittingCall] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
+  const [callSuccess, setCallSuccess] = useState(false);
+
+  // Lazy-load Vapi Web SDK on client
+  useEffect(() => {
+    let mounted = true;
+
+    async function initVapi() {
+      if (typeof window === "undefined") return;
+      try {
+        const { default: Vapi } = await import("@vapi-ai/web");
+        if (!mounted) return;
+
+        const vapi = new Vapi("42e246dc-74d0-4145-9c99-07c17575f930");
+        vapiRef.current = vapi;
+
+        // Store handler references for cleanup
+        const handleCallStart = () => {
+          setIsWebCallConnecting(false);
+          setIsWebCallActive(true);
+
+          // Send email API call in the background when call is successfully connected
+          const callInfo = vapiCallInfoRef.current;
+          if (callInfo) {
+            // Extract first name from full name
+            const firstName = callInfo.name.trim().split(" ")[0] || "";
+            // Clear the ref immediately to prevent reuse
+            vapiCallInfoRef.current = null;
+            // Fire and forget - don't block execution
+            fetch(
+              "https://acuity-stub.vercel.app/api/v1/emails/send-template",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  from: "ari@trymovo.ai",
+                  fromName: "Ari Posner",
+                  templateId: "d-7637fbd58f1e4463a93cc96ced411788",
+                  cc: "ari@trymovo.ai",
+                  to: callInfo.email,
+                  dynamicTemplateData: {
+                    first_name: firstName,
+                  },
+                }),
+              },
+            ).catch((error) => {
+              console.error("[Email API] Failed to send email:", error);
+            });
+          }
+        };
+
+        const handleCallEnd = () => {
+          setIsWebCallActive(false);
+          setIsWebCallConnecting(false);
+          setHasVapiAccess(false);
+          setWebCallError(null);
+          // Clear call info ref if call ends (info was already consumed by handleCallStart if call connected)
+          vapiCallInfoRef.current = null;
+        };
+
+        const handleError = (error: any) => {
+          console.error("[Vapi] Web call error:", error);
+          setWebCallError(normalizeCallError(error));
+          setIsWebCallActive(false);
+          setIsWebCallConnecting(false);
+          // Note: Do not remove email from queue here to avoid double-removal
+          // - If call fails before connecting, promise rejection handlers (.catch/catch) will remove it
+          // - If call errors after connecting, handleCallStart already consumed the email
+          // Removing here would cause double-removal when vapi.start() rejects AND emits error event
+        };
+
+        const handleTranscript = (data: any) => {
+          if (!data?.transcript) return;
+          setWebTranscripts((prev) => [
+            ...prev,
+            {
+              role: data.role || "assistant",
+              text: data.transcript,
+              id: Date.now() + Math.random(),
+            },
+          ]);
+
+          // Drive assistant speaking animation
+          const isAssistant = (data.role || "assistant") !== "user";
+          if (isAssistant) {
+            setIsAssistantSpeaking(true);
+            if (assistantSpeakingTimeoutRef.current) {
+              clearTimeout(assistantSpeakingTimeoutRef.current);
+            }
+            assistantSpeakingTimeoutRef.current = setTimeout(() => {
+              setIsAssistantSpeaking(false);
+            }, 900);
+          }
+        };
+
+        // Register event listeners and store references in ref
+        vapi.on("call-start", handleCallStart);
+        vapiEventHandlersRef.current.push({
+          event: "call-start",
+          handler: handleCallStart,
+        });
+
+        vapi.on("call-end", handleCallEnd);
+        vapiEventHandlersRef.current.push({
+          event: "call-end",
+          handler: handleCallEnd,
+        });
+
+        vapi.on("error", handleError);
+        vapiEventHandlersRef.current.push({
+          event: "error",
+          handler: handleError,
+        });
+
+        vapi.on("transcript" as any, handleTranscript);
+        vapiEventHandlersRef.current.push({
+          event: "transcript",
+          handler: handleTranscript,
+        });
+      } catch (err) {
+        console.error("[Vapi] Failed to initialize Web SDK:", err);
+        setWebCallError(
+          "Unable to initialize the call experience. Please try again later.",
+        );
+      }
+    }
+
+    void initVapi();
+
+    return () => {
+      mounted = false;
+      try {
+        // Clean up timeout
+        if (assistantSpeakingTimeoutRef.current) {
+          clearTimeout(assistantSpeakingTimeoutRef.current);
+          assistantSpeakingTimeoutRef.current = null;
+        }
+
+        // Remove all event listeners
+        if (vapiRef.current && vapiEventHandlersRef.current.length > 0) {
+          vapiEventHandlersRef.current.forEach(({ event, handler }) => {
+            try {
+              // Try both 'off' and 'removeListener' methods (common event emitter patterns)
+              if (typeof vapiRef.current.off === "function") {
+                vapiRef.current.off(event, handler);
+              } else if (typeof vapiRef.current.removeListener === "function") {
+                vapiRef.current.removeListener(event, handler);
+              }
+            } catch (err) {
+              // Ignore errors when removing listeners
+              console.warn(
+                `[Vapi] Failed to remove listener for ${event}:`,
+                err,
+              );
+            }
+          });
+
+          // Clear the handlers array
+          vapiEventHandlersRef.current = [];
+
+          // Stop the call if active
+          vapiRef.current.stop?.();
+        }
+      } catch {
+        // ignore cleanup errors
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentProofIndex((prev) => (prev + 1) % socialProofMessages.length)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [socialProofMessages.length])
+      setCurrentProofIndex((prev) => (prev + 1) % socialProofMessages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [socialProofMessages.length]);
 
   useEffect(() => {
     const activities = [
@@ -86,182 +510,160 @@ export default function Home() {
       { city: "Phoenix", action: "Trial confirmed", revenue: "$550" },
       { city: "Boston", action: "Package purchased", revenue: "$2,400" },
       { city: "Seattle", action: "Trial booked", revenue: "$650" },
-    ]
+    ];
 
     const interval = setInterval(() => {
-      const newActivity = activities[Math.floor(Math.random() * activities.length)]
-      setLiveActivities((prev) => [{ ...newActivity, time: "Just now" }, ...prev.slice(0, 2)])
-    }, 8000)
+      const newActivity =
+        activities[Math.floor(Math.random() * activities.length)];
+      setLiveActivities((prev) => [
+        { ...newActivity, time: "Just now" },
+        ...prev.slice(0, 2),
+      ]);
+    }, 8000);
 
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    if (showHearMovo && audioRef.current) {
-      console.log("[v0] Hear Movo modal opened, attempting to play audio")
-      // Small delay to ensure modal is visible
-      setTimeout(() => {
-        const playPromise = audioRef.current?.play()
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("[v0] Audio playback started successfully")
-              setIsPlaying(true)
-            })
-            .catch((error) => {
-              console.log("[v0] Auto-play prevented by browser:", error)
-              // Browser prevented autoplay, user needs to click play button
-              setIsPlaying(false)
-            })
-        }
-      }, 500)
-    } else if (!showHearMovo && audioRef.current) {
-      console.log("[v0] Modal closed, stopping audio")
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-      setIsPlaying(false)
-      setAudioProgress(0)
-    }
-  }, [showHearMovo])
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: "0px",
-    }
-
-    const animateOnScroll = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("animate-in")
-        }
-      })
-    }
-
-    const observer = new IntersectionObserver(animateOnScroll, observerOptions)
-    const elements = document.querySelectorAll(".fade-on-scroll")
-    elements.forEach((el) => observer.observe(el))
-
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
+    const audio = audioRef.current;
+    if (!audio) return;
 
     const updateProgress = () => {
-      const progress = (audio.currentTime / audio.duration) * 100
-      setAudioProgress(progress)
-    }
+      if (!audio || isNaN(audio.duration) || audio.duration === 0) return; // Ensure duration is valid
+      const progress = (audio.currentTime / audio.duration) * 100;
+      setAudioProgress(progress);
+    };
 
-    audio.addEventListener("timeupdate", updateProgress)
-    return () => audio.removeEventListener("timeupdate", updateProgress)
-  }, [])
+    audio.addEventListener("timeupdate", updateProgress);
+    return () => audio.removeEventListener("timeupdate", updateProgress);
+  }, []);
 
-  const [counts, setCounts] = useState({ response: 0, conversion: 0, revenue: 0 })
-  const [statsVisible, setStatsVisible] = useState(false)
-  const statsRef = useRef<HTMLDivElement>(null)
+  const [counts, setCounts] = useState({
+    response: 0,
+    conversion: 0,
+    revenue: 0,
+  });
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   const handleHeroAudioPlay = () => {
     if (heroAudioRef.current) {
       if (isHeroAudioPlaying) {
-        heroAudioRef.current.pause()
-        setIsHeroAudioPlaying(false)
+        heroAudioRef.current.pause();
+        setIsHeroAudioPlaying(false);
       } else {
-        const playPromise = heroAudioRef.current.play()
+        const playPromise = heroAudioRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              setIsHeroAudioPlaying(true)
+              setIsHeroAudioPlaying(true);
             })
             .catch((error) => {
-              console.error("Error playing audio:", error)
-              setIsHeroAudioPlaying(false)
-            })
+              console.error("Error playing audio:", error);
+              setIsHeroAudioPlaying(false);
+            });
         }
       }
     }
-  }
+  };
 
   useEffect(() => {
-    const audio = heroAudioRef.current
-    if (!audio) return
+    const audio = heroAudioRef.current;
+    if (!audio) return;
 
     const handleEnded = () => {
-      setIsHeroAudioPlaying(false)
-    }
+      setIsHeroAudioPlaying(false);
+    };
 
-    audio.addEventListener("ended", handleEnded)
-    return () => audio.removeEventListener("ended", handleEnded)
-  }, [])
+    audio.addEventListener("ended", handleEnded);
+    return () => audio.removeEventListener("ended", handleEnded);
+  }, []);
 
   const handleLearnVideoPlay = () => {
     if (learnVideoRef.current) {
       if (isLearnVideoPlaying) {
-        learnVideoRef.current.pause()
-        setIsLearnVideoPlaying(false)
+        learnVideoRef.current.pause();
+        setIsLearnVideoPlaying(false);
       } else {
-        const playPromise = learnVideoRef.current.play()
+        const playPromise = learnVideoRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              setIsLearnVideoPlaying(true)
+              setIsLearnVideoPlaying(true);
             })
             .catch((error) => {
-              console.error("Error playing video:", error)
-              setIsLearnVideoPlaying(false)
-            })
+              console.error("Error playing video:", error);
+              setIsLearnVideoPlaying(false);
+            });
         }
       }
     }
-  }
+  };
 
   useEffect(() => {
-    const audio = learnVideoRef.current
-    if (!audio) return
+    const audio = learnVideoRef.current;
+    if (!audio) return;
 
     const handleEnded = () => {
-      setIsLearnVideoPlaying(false)
-    }
+      setIsLearnVideoPlaying(false);
+    };
 
-    audio.addEventListener("ended", handleEnded)
-    return () => audio.removeEventListener("ended", handleEnded)
-  }, [])
+    audio.addEventListener("ended", handleEnded);
+    return () => audio.removeEventListener("ended", handleEnded);
+  }, []);
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
+      // Changed to audioRef for general audio playback
       if (isPlaying) {
-        audioRef.current.pause()
-        setIsPlaying(false)
+        audioRef.current.pause();
+        setIsPlaying(false);
       } else {
-        const playPromise = audioRef.current.play()
+        const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              setIsPlaying(true)
+              setIsPlaying(true);
             })
             .catch((error) => {
-              console.error("Error playing audio:", error)
-              setIsPlaying(false)
-            })
+              console.error("Error playing audio:", error);
+              setIsPlaying(false);
+            });
         }
       }
     }
-  }
+  };
 
   const handleDemoSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Handle demo submission logic
-  }
+  };
 
   const handleCallMeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("🚀 handleCallMeSubmit called - NEW VERSION")
-    setCallError(null)
-    setCallSuccess(false)
-    setIsSubmittingCall(true)
+    e.preventDefault();
+    setCallError(null);
+    setCallSuccess(false);
 
-    console.log("Submitting call request:", { name: callMeForm.name, email: callMeForm.email, phone: callMeForm.phone })
+    const submittedText = [
+      callMeForm.name,
+      callMeForm.email,
+      callMeForm.phone,
+      callMeForm.assistantId,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    if (containsUnsafeLanguage(submittedText)) {
+      setCallError(
+        "We couldn't process your request. Please remove unsafe language and try again.",
+      );
+      // Removed posthog.capture call
+      return;
+    }
+
+    setIsSubmittingCall(true);
+    setIsCallConnecting(true);
+
+    const assistantId = callMeForm.assistantId.trim();
 
     try {
       const response = await fetch("/api/create-call", {
@@ -273,293 +675,513 @@ export default function Home() {
           name: callMeForm.name,
           email: callMeForm.email,
           phone: callMeForm.phone,
+          ...(assistantId ? { assistantId } : {}),
         }),
-      })
+      });
 
-      console.log("API response status:", response.status)
-
-      const data = await response.json()
-      console.log("API response data:", data)
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to initiate call")
+        throw new Error(data.error || "Failed to initiate call");
       }
 
-      setCallSuccess(true)
-      console.log("Call initiated successfully, callId:", data.callId)
-      // Reset form after a short delay
+      setCallSuccess(true);
+      setIsCallActive(true);
+      setIsCallConnecting(false);
+
+      setShowCallMe(false);
+
+      const emailDomain = callMeForm.email.split("@")[1] || "unknown";
+      let phoneCountryCode = "+1";
+      const cleanedPhone = callMeForm.phone.replace(/[^\d+]/g, "");
+      if (cleanedPhone.startsWith("+")) {
+        const match = cleanedPhone.match(/^\+(\d{1,3})/);
+        if (match) {
+          phoneCountryCode = `+${match[1]}`;
+        }
+      } else if (cleanedPhone.startsWith("1") && cleanedPhone.length >= 11) {
+        phoneCountryCode = "+1";
+      }
+
+      const firstName = callMeForm.name.trim().split(" ")[0] || "";
+
+      // Removed posthog.capture call
+      fetch("/api/notify-slack", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          call_id: data.callId,
+          name: callMeForm.name,
+          email: callMeForm.email,
+          phone: callMeForm.phone,
+          email_domain: emailDomain,
+          phone_country_code: phoneCountryCode,
+          first_name: firstName,
+        }),
+      }).catch((error) => {
+        console.error("Failed to send Slack notification:", error);
+      });
+
       setTimeout(() => {
-        setShowCallMe(false)
-        setCallMeForm({ name: "", email: "", phone: "", newsletter: true })
-        setCallSuccess(false)
-      }, 2000)
+        setIsCallActive(false);
+        setCallMeForm({
+          name: "",
+          email: "",
+          phone: "",
+          assistantId: "",
+          newsletter: true,
+        });
+        setCallSuccess(false);
+      }, 30000); // 30 seconds
     } catch (error) {
-      console.error("Error submitting call request:", error)
-      setCallError(error instanceof Error ? error.message : "Failed to initiate call. Please try again.")
+      setCallError(
+        error instanceof Error
+          ? error.message
+          : "Failed to initiate call. Please try again.",
+      );
+      setIsCallConnecting(false);
+      setIsCallActive(false);
     } finally {
-      setIsSubmittingCall(false)
+      setIsSubmittingCall(false);
     }
-  }
+  };
+
+  const handleVapiPrefillSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !vapiUserInfo.name ||
+      !vapiUserInfo.email ||
+      !vapiUserInfo.phone ||
+      !vapiConsentChecked
+    ) {
+      return;
+    }
+
+    // Prevent multiple simultaneous calls
+    if (isWebCallConnecting || isWebCallActive) {
+      return;
+    }
+
+    setWebCallError(null);
+    setIsWebCallConnecting(true);
+
+    // Store email and name for use in call-start event handler
+    vapiCallInfoRef.current = {
+      email: vapiUserInfo.email,
+      name: vapiUserInfo.name,
+    };
+
+    setHasVapiAccess(true);
+    setShowVapiPrefill(false);
+    setVapiConsentChecked(false);
+
+    // Fire Slack webhook similar to old call flow
+    const emailDomain = vapiUserInfo.email.split("@")[1] || "unknown";
+    let phoneCountryCode = "+1";
+    const cleanedPhone = vapiUserInfo.phone.replace(/[^\d+]/g, "");
+    if (cleanedPhone.startsWith("+")) {
+      const match = cleanedPhone.match(/^\+(\d{1,3})/);
+      if (match) {
+        phoneCountryCode = `+${match[1]}`;
+      }
+    } else if (cleanedPhone.startsWith("1") && cleanedPhone.length >= 11) {
+      phoneCountryCode = "+1";
+    }
+
+    const firstName = vapiUserInfo.name.trim().split(" ")[0] || "";
+
+    fetch("/api/notify-slack", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        call_id: `vapi-prefill-${Date.now()}`,
+        name: vapiUserInfo.name,
+        email: vapiUserInfo.email,
+        phone: vapiUserInfo.phone,
+        email_domain: emailDomain,
+        phone_country_code: phoneCountryCode,
+        first_name: firstName,
+      }),
+    }).catch((error) => {
+      console.error(
+        "Failed to send Slack notification for Vapi prefill:",
+        error,
+      );
+    });
+
+    // Start web call via Vapi Web SDK with assistant overrides
+    try {
+      if (!vapiRef.current) {
+        console.error(
+          "[Vapi] Web SDK instance not available when starting call",
+        );
+        setWebCallError(normalizeCallError({ message: "SDK not available" }));
+        setIsWebCallConnecting(false);
+        setIsWebCallActive(false);
+        setHasVapiAccess(false);
+        return;
+      }
+
+      vapiRef.current
+        .start("1baa4c19-196c-4c3f-ba9e-821035d17853", {
+          variableValues: {
+            first_name: firstName,
+            email_address: vapiUserInfo.email,
+          },
+          hooks: [
+            {
+              do: [{ type: "say", exact: [`${firstName}?`] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_1",
+              options: {
+                timeoutSeconds: 7,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+            {
+              do: [{ type: "say", exact: [`${firstName}, you there?`] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_2",
+              options: {
+                timeoutSeconds: 14,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+            {
+              do: [{ type: "say", exact: ["Did I scare you off?"] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_3",
+              options: {
+                timeoutSeconds: 21,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+          ],
+        })
+        .catch((error: any) => {
+          console.error("[Vapi] Error starting web call:", error);
+          setWebCallError(normalizeCallError(error));
+          setIsWebCallConnecting(false);
+          setIsWebCallActive(false);
+          setHasVapiAccess(false);
+          // Clear call info ref since call failed
+          vapiCallInfoRef.current = null;
+        });
+    } catch (error: any) {
+      console.error("[Vapi] Error starting web call:", error);
+      setWebCallError(normalizeCallError(error));
+      setIsWebCallConnecting(false);
+      setIsWebCallActive(false);
+      setHasVapiAccess(false);
+      // Clear call info ref since call failed
+      vapiCallInfoRef.current = null;
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
       if (phoneAudioRef.current && isPhonePlaying) {
-        const progress = (phoneAudioRef.current.currentTime / phoneAudioRef.current.duration) * 100
-        setPhoneAudioProgress(progress)
+        const progress =
+          (phoneAudioRef.current.currentTime / phoneAudioRef.current.duration) *
+          100;
+        setPhoneAudioProgress(progress);
       }
-    }, 100)
+    }, 100);
 
-    return () => clearInterval(interval)
-  }, [isPhonePlaying])
+    return () => clearInterval(interval);
+  }, [isPhonePlaying]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       if (audioRef.current && isPlaying) {
-        // The error was here: `audio` was used instead of `audioRef.current`
-        const audio = audioRef.current
-        if (!audio) return // Added safety check
-        const progress = (audio.currentTime / audio.duration) * 100
-        setAudioProgress(progress)
+        const audio = audioRef.current;
+        if (!audio || isNaN(audio.duration) || audio.duration === 0) return; // Added safety check
+        const progress = (audio.currentTime / audio.duration) * 100;
+        setAudioProgress(progress);
       }
-    }, 100)
+    }, 100);
 
-    return () => clearInterval(interval)
-  }, [isPlaying])
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   useEffect(() => {
-    const audio = phoneAudioRef.current
-    if (!audio) return
+    const audio = phoneAudioRef.current;
+    if (!audio) return;
 
     const updateProgress = () => {
-      const progress = (audio.currentTime / audio.duration) * 100
-      setPhoneAudioProgress(progress)
-    }
+      if (!audio || isNaN(audio.duration) || audio.duration === 0) return; // Ensure duration is valid
+      const progress = (audio.currentTime / audio.duration) * 100;
+      setPhoneAudioProgress(progress);
+    };
 
-    audio.addEventListener("timeupdate", updateProgress)
-    return () => audio.removeEventListener("timeupdate", updateProgress)
-  }, [])
+    audio.addEventListener("timeupdate", updateProgress);
+    return () => audio.removeEventListener("timeupdate", updateProgress);
+  }, []);
 
   useEffect(() => {
-    const audio = phoneAudioRef.current
-    if (!audio) return
+    const audio = phoneAudioRef.current;
+    if (!audio) return;
 
     const handleEnded = () => {
-      setIsPhonePlaying(false)
-      setPhoneAudioProgress(0)
-    }
+      setIsPhonePlaying(false);
+      setPhoneAudioProgress(0);
+    };
 
-    audio.addEventListener("ended", handleEnded)
-    return () => audio.removeEventListener("ended", handleEnded)
-  }, [])
+    audio.addEventListener("ended", handleEnded);
+    return () => audio.removeEventListener("ended", handleEnded);
+  }, []);
 
   const handlePhonePlayAudio = () => {
     if (phoneAudioRef.current) {
       if (isPhonePlaying) {
-        phoneAudioRef.current.pause()
-        setIsPhonePlaying(false)
+        phoneAudioRef.current.pause();
+        setIsPhonePlaying(false);
       } else {
-        const playPromise = phoneAudioRef.current.play()
+        const playPromise = phoneAudioRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              setIsPhonePlaying(true)
+              setIsPhonePlaying(true);
             })
             .catch((error) => {
-              console.error("Error playing audio:", error)
-              setIsPhonePlaying(false)
-            })
+              console.error("Error playing audio:", error);
+              setIsPhonePlaying(false);
+            });
         }
       }
     }
-  }
+  };
 
   // Placeholder for calculatedRevenue, assuming it's derived from other states
   // You might want to move the calculation to a place where all dependencies are guaranteed to be set
   useEffect(() => {
     // Dummy calculation for now, replace with actual logic if needed
-    setCalculatedRevenue((missedCalls * (conversionRate / 100) * avgEnrollment) / 1000)
-  }, [missedCalls, conversionRate, avgEnrollment])
+    setCalculatedRevenue(
+      (missedCalls * (conversionRate / 100) * avgEnrollment) / 1000,
+    );
+  }, [missedCalls, conversionRate, avgEnrollment]);
 
-  const [weeklyRevenue, setWeeklyRevenue] = useState(0)
-  const [isRevenueVisible, setIsRevenueVisible] = useState(false)
-  const revenueTargetRef = useRef<HTMLDivElement>(null)
+  const [weeklyRevenue, setWeeklyRevenue] = useState(0);
+  const [isRevenueVisible, setIsRevenueVisible] = useState(false);
+  const revenueTargetRef = useRef<HTMLDivElement>(null);
 
   // Animate revenue counter when section is visible
   useEffect(() => {
     const observerOptions = {
       threshold: 0.3,
       rootMargin: "0px",
-    }
+    };
 
     const animateRevenue = (entries: IntersectionObserverEntry[]) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting && !isRevenueVisible) {
-          setIsRevenueVisible(true)
-          let currentValue = 0
-          const target = 2840
-          const duration = 2000 // 2 seconds
-          const increment = target / (duration / 16) // 60fps
+          setIsRevenueVisible(true);
+          let currentValue = 0;
+          const target = 2840;
+          const duration = 2000; // 2 seconds
+          const increment = target / (duration / 16); // 60fps
 
           const timer = setInterval(() => {
-            currentValue += increment
+            currentValue += increment;
             if (currentValue >= target) {
-              setWeeklyRevenue(target)
-              clearInterval(timer)
+              setWeeklyRevenue(target);
+              clearInterval(timer);
             } else {
-              setWeeklyRevenue(Math.floor(currentValue))
+              setWeeklyRevenue(Math.floor(currentValue));
             }
-          }, 16)
+          }, 16);
         }
-      })
-    }
+      });
+    };
 
-    const observer = new IntersectionObserver(animateRevenue, observerOptions)
+    const observer = new IntersectionObserver(animateRevenue, observerOptions);
     if (revenueTargetRef.current) {
-      observer.observe(revenueTargetRef.current)
+      observer.observe(revenueTargetRef.current);
     }
 
-    return () => observer.disconnect()
-  }, [isRevenueVisible])
+    return () => observer.disconnect();
+  }, [isRevenueVisible]);
 
-  const [dashboardStats, setDashboardStats] = useState({ revenue: 0, calls: 0, messages: 0, emails: 0 })
-  const [isDashboardVisible, setIsDashboardVisible] = useState(false)
-  const dashboardRef = useRef<HTMLDivElement>(null)
+  const [dashboardStats, setDashboardStats] = useState({
+    revenue: 0,
+    calls: 0,
+    messages: 0,
+    emails: 0,
+  });
+  const [isDashboardVisible, setIsDashboardVisible] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observerOptions = {
       threshold: 0.1, // Trigger when 10% visible
       rootMargin: "0px",
-    }
+    };
 
     const animateDashboard = (entries: IntersectionObserverEntry[]) => {
       entries.forEach((entry) => {
-        console.log("[v0] Dashboard intersection:", entry.isIntersecting, "Already visible:", isDashboardVisible)
+        console.log(
+          "[v0] Dashboard intersection:",
+          entry.isIntersecting,
+          "Already visible:",
+          isDashboardVisible,
+        );
 
         if (entry.isIntersecting && !isDashboardVisible) {
-          console.log("[v0] Starting dashboard animation")
-          setIsDashboardVisible(true)
+          console.log("[v0] Starting dashboard animation");
+          setIsDashboardVisible(true);
 
           // Animate revenue from 0 to 6300
-          let revenueVal = 0
+          let revenueVal = 0;
           const revenueTimer = setInterval(() => {
-            revenueVal += 126 // Will reach 6300 in ~50 frames (1 second)
+            revenueVal += 126; // Will reach 6300 in ~50 frames (1 second)
             if (revenueVal >= 6300) {
-              setDashboardStats((prev) => ({ ...prev, revenue: 6300 }))
-              clearInterval(revenueTimer)
-              console.log("[v0] Revenue animation complete: 6300")
+              setDashboardStats((prev) => ({ ...prev, revenue: 6300 }));
+              clearInterval(revenueTimer);
+              console.log("[v0] Revenue animation complete: 6300");
             } else {
-              setDashboardStats((prev) => ({ ...prev, revenue: Math.floor(revenueVal) }))
+              setDashboardStats((prev) => ({
+                ...prev,
+                revenue: Math.floor(revenueVal),
+              }));
             }
-          }, 20)
+          }, 20);
 
           // Animate calls from 0 to 900
-          let callsVal = 0
+          let callsVal = 0;
           const callsTimer = setInterval(() => {
-            callsVal += 18 // Will reach 900 in ~50 frames (1 second)
+            callsVal += 18; // Will reach 900 in ~50 frames (1 second)
             if (callsVal >= 900) {
-              setDashboardStats((prev) => ({ ...prev, calls: 900 }))
-              clearInterval(callsTimer)
-              console.log("[v0] Calls animation complete: 900")
+              setDashboardStats((prev) => ({ ...prev, calls: 900 }));
+              clearInterval(callsTimer);
+              console.log("[v0] Calls animation complete: 900");
             } else {
-              setDashboardStats((prev) => ({ ...prev, calls: Math.floor(callsVal) }))
+              setDashboardStats((prev) => ({
+                ...prev,
+                calls: Math.floor(callsVal),
+              }));
             }
-          }, 20)
+          }, 20);
 
           // Animate messages from 0 to 650
-          let messagesVal = 0
+          let messagesVal = 0;
           const messagesTimer = setInterval(() => {
-            messagesVal += 13 // Will reach 650 in ~50 frames (1 second)
+            messagesVal += 13; // Will reach 650 in ~50 frames (1 second)
             if (messagesVal >= 650) {
-              setDashboardStats((prev) => ({ ...prev, messages: 650 }))
-              clearInterval(messagesTimer)
-              console.log("[v0] Messages animation complete: 650")
+              setDashboardStats((prev) => ({ ...prev, messages: 650 }));
+              clearInterval(messagesTimer);
+              console.log("[v0] Messages animation complete: 650");
             } else {
-              setDashboardStats((prev) => ({ ...prev, messages: Math.floor(messagesVal) }))
+              setDashboardStats((prev) => ({
+                ...prev,
+                messages: Math.floor(messagesVal),
+              }));
             }
-          }, 20)
+          }, 20);
 
           // Animate emails from 0 to 2500
-          let emailsVal = 0
+          let emailsVal = 0;
           const emailsTimer = setInterval(() => {
-            emailsVal += 50 // Will reach 2500 in ~50 frames (1 second)
+            emailsVal += 50; // Will reach 2500 in ~50 frames (1 second)
             if (emailsVal >= 2500) {
-              setDashboardStats((prev) => ({ ...prev, emails: 2500 }))
-              clearInterval(emailsTimer)
-              console.log("[v0] Emails animation complete: 2500")
+              setDashboardStats((prev) => ({ ...prev, emails: 2500 }));
+              clearInterval(emailsTimer);
+              console.log("[v0] Emails animation complete: 2500");
             } else {
-              setDashboardStats((prev) => ({ ...prev, emails: Math.floor(emailsVal) }))
+              setDashboardStats((prev) => ({
+                ...prev,
+                emails: Math.floor(emailsVal),
+              }));
             }
-          }, 20)
+          }, 20);
         }
-      })
-    }
+      });
+    };
 
-    const observer = new IntersectionObserver(animateDashboard, observerOptions)
+    const observer = new IntersectionObserver(
+      animateDashboard,
+      observerOptions,
+    );
     if (dashboardRef.current) {
-      console.log("[v0] Observer attached to dashboard")
-      observer.observe(dashboardRef.current)
+      console.log("[v0] Observer attached to dashboard");
+      observer.observe(dashboardRef.current);
     }
 
-    return () => observer.disconnect()
-  }, [isDashboardVisible])
+    return () => observer.disconnect();
+  }, [isDashboardVisible]);
 
   useEffect(() => {
     const observerOptions = {
       threshold: 0.3,
       rootMargin: "0px",
-    }
+    };
 
     const animateStats = (entries: IntersectionObserverEntry[]) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting && !statsVisible) {
-          setStatsVisible(true)
+          setStatsVisible(true);
 
           // Animate response time (target: 5)
-          let responseVal = 0
+          let responseVal = 0;
           const responseTimer = setInterval(() => {
-            responseVal += 0.1
+            responseVal += 0.1;
             if (responseVal >= 5) {
-              setCounts((prev) => ({ ...prev, response: 5 }))
-              clearInterval(responseTimer)
+              setCounts((prev) => ({ ...prev, response: 5 }));
+              clearInterval(responseTimer);
             } else {
-              setCounts((prev) => ({ ...prev, response: Math.round(responseVal * 10) / 10 }))
+              setCounts((prev) => ({
+                ...prev,
+                response: Math.round(responseVal * 10) / 10,
+              }));
             }
-          }, 30)
+          }, 30);
 
           // Animate conversion (target: 47)
-          let conversionVal = 0
+          let conversionVal = 0;
           const conversionTimer = setInterval(() => {
-            conversionVal += 0.8
+            conversionVal += 0.8;
             if (conversionVal >= 47) {
-              setCounts((prev) => ({ ...prev, conversion: 47 }))
-              clearInterval(conversionTimer)
+              setCounts((prev) => ({ ...prev, conversion: 47 }));
+              clearInterval(conversionTimer);
             } else {
-              setCounts((prev) => ({ ...prev, conversion: Math.floor(conversionVal) }))
+              setCounts((prev) => ({
+                ...prev,
+                conversion: Math.floor(conversionVal),
+              }));
             }
-          }, 30)
+          }, 30);
 
           // Animate revenue (target: 4200)
-          let revenueVal = 0
+          let revenueVal = 0;
           const revenueTimer = setInterval(() => {
-            revenueVal += 70
+            revenueVal += 70;
             if (revenueVal >= 4200) {
-              setCounts((prev) => ({ ...prev, revenue: 4200 }))
-              clearInterval(revenueTimer)
+              setCounts((prev) => ({ ...prev, revenue: 4200 }));
+              clearInterval(revenueTimer);
             } else {
-              setCounts((prev) => ({ ...prev, revenue: Math.floor(revenueVal) }))
+              setCounts((prev) => ({
+                ...prev,
+                revenue: Math.floor(revenueVal),
+              }));
             }
-          }, 30)
+          }, 30);
         }
-      })
-    }
+      });
+    };
 
-    const observer = new IntersectionObserver(animateStats, observerOptions)
+    const observer = new IntersectionObserver(animateStats, observerOptions);
     if (statsRef.current) {
-      observer.observe(statsRef.current)
+      observer.observe(statsRef.current);
     }
 
-    return () => observer.disconnect()
-  }, [statsVisible])
+    return () => observer.disconnect();
+  }, [statsVisible]);
 
   return (
     <>
@@ -570,7 +1192,7 @@ export default function Home() {
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage:
-              "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%209%202025%20%283%29-8bYxHxAQ0hnWrqQq3P4GKmM3DkXslx.png)",
+              "url(/images/kids-20playing-20sport-20graphic-20nov-209-202025-20-283-29.png)",
           }}
         />
 
@@ -580,59 +1202,43 @@ export default function Home() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 md:px-8 lg:px-16 py-32 md:py-20 text-center">
           <h1 className="font-serif text-4xl sm:text-5xl md:text-5xl lg:text-6xl xl:text-7xl font-normal leading-tight text-white mb-6 max-w-5xl">
-            AI That Sells for Your Academy
+            AI That Sells for Your
             <br />
+            Sports Academy
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-white/90 mb-8 max-w-3xl leading-relaxed px-4">
-            Movo calls every parent, fills your sports programs, and grows your revenue - automatically.
+            Movo calls every parent, books enrollments, and grows your revenue -
+            automatically.
           </p>
 
           <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <button
+              onClick={() => {
+                // Removed posthog.capture call
+                setShowVapiPrefill(true);
+              }}
+              className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-lg transition-all duration-300 hover:shadow-xl hover:scale-105 w-full sm:w-auto cursor-pointer animate-slide-in-out"
+            >
+              Talk to Movo
+              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
             <a
-              href="https://calendly.com/ari-movoai/30min"
+              href="https://calendly.com/ari-movo/30min"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[48px]"
+              onClick={() => {}}
+              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-lg transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
             >
-              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-              Book a demo
+              <span className="font-medium whitespace-nowrap text-sm md:text-base">
+                Book a demo
+              </span>
             </a>
-            <button
-              onClick={handleHeroAudioPlay}
-              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px] min-w-[200px] md:min-w-[240px]"
-            >
-              <div className="relative w-6 h-6 md:w-8 md:h-8 flex items-center justify-center flex-shrink-0">
-                {/* Animated waveform dots */}
-                {isHeroAudioPlaying ? (
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "12px", animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "18px", animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "10px", animationDelay: "300ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "14px", animationDelay: "100ms" }}
-                    ></div>
-                  </div>
-                ) : (
-                  <Play className="w-4 h-4 md:w-5 md:h-5" />
-                )}
-              </div>
-              <span className="font-medium whitespace-nowrap text-sm md:text-base">Hear how Movo sells</span>
-            </button>
 
             <audio
               ref={heroAudioRef}
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav"
+              src="/audio/hero-intro.mp3"
               className="hidden"
             />
           </div>
@@ -642,123 +1248,252 @@ export default function Home() {
               Trusted by leading sports academies
             </p>
             <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-12 lg:gap-16">
-              {["Supreme Hoops", "MPAC Sports", "Haifa Swim", "Pro Soccer Academy", "Champion Tennis"].map(
-                (name, i) => (
-                  <span
-                    key={i}
-                    className="text-white/70 font-semibold text-sm sm:text-base md:text-lg lg:text-xl hover:text-white transition-all duration-300 hover:scale-110"
-                  >
-                    {name}
-                  </span>
-                ),
-              )}
+              {[
+                "Elite Baseball Academy",
+                "All Star Sports Academy",
+                "Haifa Swim",
+                "Supreme Hoops",
+                "Pacific Reign",
+              ].map((name, i) => (
+                <span
+                  key={i}
+                  className="text-white/70 font-semibold text-sm sm:text-base md:text-lg lg:text-xl hover:text-white transition-all duration-300 hover:scale-110"
+                >
+                  {name}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       </section>
-      <button
-        onClick={() => setShowCallMe(true)}
-        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-white text-gray-900 font-semibold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 group cursor-pointer"
-      >
-        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-          <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          {/* Pulsing ring effect */}
-          <div className="absolute inset-0 rounded-lg bg-green-500 animate-ping opacity-40"></div>
-        </div>
-        <span className="text-sm sm:text-base">Talk to Movo</span>
-      </button>
+      {/* Floating call button - shows different states */}
+      {(hasVapiAccess ||
+        isWebCallConnecting ||
+        isWebCallActive ||
+        webCallError) && (
+        <button
+          onClick={() => {
+            if (isWebCallActive) {
+              // End call
+              try {
+                vapiRef.current?.stop?.();
+              } catch {
+                // ignore
+              }
+              setIsWebCallActive(false);
+              setIsWebCallConnecting(false);
+              setHasVapiAccess(false);
+              setWebCallError(null);
+            } else if (isWebCallConnecting) {
+              // Cancel connecting
+              try {
+                vapiRef.current?.stop?.();
+              } catch {
+                // ignore
+              }
+              setIsWebCallConnecting(false);
+              setIsWebCallActive(false);
+              setHasVapiAccess(false);
+              setWebCallError(null);
+            } else if (webCallError) {
+              // Retry - open prefill form again
+              setWebCallError(null);
+              setHasVapiAccess(false);
+              setShowVapiPrefill(true);
+            }
+          }}
+          className={`fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-5 py-3 text-sm shadow-lg backdrop-blur-sm transition-colors cursor-pointer ${
+            webCallError && !isWebCallActive
+              ? "bg-rose-500/90 hover:bg-rose-600 text-white"
+              : isWebCallActive
+                ? "bg-rose-500/90 hover:bg-rose-600 text-white"
+                : "bg-black/80 hover:bg-black text-white"
+          }`}
+        >
+          {isWebCallActive ? (
+            <>
+              <span className="font-medium">End call</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : isWebCallConnecting ? (
+            <>
+              <span className="font-medium">Connecting...</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-semibold">
+                <svg
+                  className="w-3 h-3 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : webCallError ? (
+            <>
+              <span className="font-medium">Retry</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : null}
+        </button>
+      )}
+      {/* CHANGE: Updated to match HappyRobot design - less rounded, narrower, with custom phone icon */}
+      {!hasVapiAccess &&
+        !isWebCallConnecting &&
+        !isWebCallActive &&
+        !webCallError && (
+          <div className="fixed bottom-6 right-6 z-40">
+            <div className="bg-[#8B7355]/15 backdrop-blur-sm rounded-[18px] p-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+              <button
+                onClick={() => {
+                  trackClick("button", "Talk to Movo", "vapi_prefill", {
+                    source: "floating_pill",
+                  });
+                  setShowVapiPrefill(true);
+                }}
+                className="flex items-center gap-3 rounded-[14px] bg-white hover:bg-gray-50 text-gray-900 pl-3 pr-5 py-2.5 text-base font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-200 cursor-pointer"
+              >
+                <span className="flex items-center justify-center w-[42px] h-[42px] rounded-[8px] overflow-hidden flex-shrink-0">
+                  <img
+                    src="/images/phone-icon.png"
+                    alt="Phone"
+                    className="w-full h-full object-cover"
+                  />
+                </span>
+                <span className="font-semibold tracking-tight whitespace-nowrap">
+                  Talk to Movo
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
       <section id="product" className="min-h-screen flex items-center">
         <div className="w-full grid lg:grid-cols-2">
           {/* Left side - White background with content */}
-          <div className="bg-white px-8 md:px-16 lg:px-20 py-20 flex items-center">
+          <div className="bg-white px-8 md:px-12 lg:px-16 py-12 flex items-center">
             <div className="max-w-xl">
-              <div className="text-xs font-semibold tracking-widest text-gray-500 mb-8">BUILT FOR SPORTS ACADEMIES</div>
+              <div className="text-xs font-semibold tracking-widest text-gray-500 mb-4">
+                BUILT FOR SPORTS ACADEMIES
+              </div>
 
               <div
                 ref={revenueTargetRef}
-                className="inline-flex items-center gap-2 mb-8 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm"
+                className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm"
               >
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-semibold text-green-700">+$4,840 in new trials this week</span>
+                <span className="text-xs font-semibold text-green-700">
+                  +30% higher conversion per lead
+                </span>
               </div>
 
-              <h2 className="text-5xl md:text-6xl lg:text-7xl font-serif leading-tight text-gray-900 mb-8">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight text-gray-900 mb-4">
                 AI that learns your academy
                 <span className="block text-gray-400 italic">inside out.</span>
               </h2>
-              <p className="text-lg text-gray-600 leading-relaxed mb-10">
-                Trains on your programs, pricing, and families - then sells like your best rep.
+              <p className="text-base text-gray-600 leading-relaxed mb-6">
+                Trains on your programs, pricing, and families - then sells like
+                your best rep.
               </p>
 
+              {/* CHANGE: Added "See Movo learn in action" button */}
               <button
-                onClick={handleLearnVideoPlay}
-                className="group flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 mb-16 hover:shadow-2xl hover:scale-105 cursor-pointer w-auto max-w-fit"
+                onClick={() =>
+                  playProtectedAudio(
+                    "learn",
+                    learnVideoRef,
+                    setIsLearnVideoPlaying,
+                  )
+                }
+                className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
               >
-                <div className="relative w-5 h-5 md:w-6 md:h-6 flex items-center justify-center flex-shrink-0">
-                  {isLearnVideoPlaying ? (
-                    <div className="flex items-center gap-1">
-                      <div
-                        className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "14px", animationDelay: "0ms" }}
-                      ></div>
-                      <div
-                        className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "20px", animationDelay: "150ms" }}
-                      ></div>
-                      <div
-                        className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "12px", animationDelay: "300ms" }}
-                      ></div>
-                      <div
-                        className="w-1 bg-white rounded-full animate-pulse"
-                        style={{ height: "16px", animationDelay: "100ms" }}
-                      ></div>
-                    </div>
-                  ) : (
-                    <Play className="w-4 h-4 md:w-4 md:h-4" />
-                  )}
-                </div>
-                <span className="font-medium whitespace-nowrap text-sm md:text-base">See Movo learn in action</span>
+                {isLearnVideoPlaying ? (
+                  <Pause className="w-5 h-5" />
+                ) : (
+                  <Play className="w-5 h-5" />
+                )}
+                Hear Movo in action
               </button>
-              <audio
-                ref={learnVideoRef}
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav"
-                className="hidden"
-              />
 
               {/* Numbered features */}
-              <div className="space-y-8 border-t border-gray-200 pt-12">
-                <div className="flex gap-6 group cursor-pointer hover:translate-x-2 transition-all duration-500">
-                  <div className="text-3xl font-bold text-gray-900 flex-shrink-0 group-hover:text-[#D97948] transition-colors duration-300">
+              <div className="space-y-4 pt-6">
+                <div className="flex gap-4">
+                  <div className="text-2xl font-bold text-gray-900 flex-shrink-0">
                     01
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Understands your playbook</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Knows your age groups, pricing, and peak hours so every parent gets the right answer instantly.
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      Understands your playbook
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      Knows your age groups, pricing, and peak hours so every
+                      parent gets the right answer instantly.
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-6 group cursor-pointer hover:translate-x-2 transition-all duration-500">
-                  <div className="text-3xl font-bold text-gray-900 flex-shrink-0 group-hover:text-[#D97948] transition-colors duration-300">
+                <div className="flex gap-4">
+                  <div className="text-2xl font-bold text-gray-900 flex-shrink-0">
                     02
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Connects your systems</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Syncs with your tools like iClassPro, Stripe, and your calendar to manage bookings and payments
-                      automatically.
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      Connects your systems
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      Syncs with your tools like iClassPro, Stripe, and your
+                      calendar to manage bookings and payments automatically.
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-6 group cursor-pointer hover:translate-x-2 transition-all duration-500">
-                  <div className="text-3xl font-bold text-gray-900 flex-shrink-0 group-hover:text-[#D97948] transition-colors duration-300">
+                <div className="flex gap-4">
+                  <div className="text-2xl font-bold text-gray-900 flex-shrink-0">
                     03
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Gets sharper every week</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Learns from every call and message to close faster next time.
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      Gets smarter every week
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      Learns from every call and message to close faster next
+                      time.
                     </p>
                   </div>
                 </div>
@@ -768,10 +1503,10 @@ export default function Home() {
 
           {/* Right side - Gradient background with Premium Movo Dashboard */}
           <div
-            className="relative px-4 sm:px-6 md:px-12 lg:px-16 py-8 sm:py-12 md:py-16 flex items-center justify-center overflow-hidden"
+            className="relative px-4 sm:px-6 md:px-10 lg:px-12 py-6 sm:py-8 md:py-10 flex items-center justify-center overflow-hidden"
             style={{
               backgroundImage:
-                "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%2010%202025%20%282%29-V8JNogRABiiVjppDmMwDRCWb6aV7yD.png)",
+                "url(/images/kids-20playing-20sport-20graphic-20nov-2010-202025-20-282-29.png)",
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -781,137 +1516,160 @@ export default function Home() {
             <div ref={dashboardRef} className="relative z-10 w-full max-w-4xl">
               <div className="bg-white rounded-lg sm:rounded-xl shadow-xl overflow-hidden border border-gray-200">
                 {/* Header */}
-                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+                <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-100">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2">
                       <div>
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900">Movo Intelligence</h3>
-                        
+                        <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                          Movo Intelligence
+                        </h3>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 rounded-lg border border-green-200">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs sm:text-sm font-semibold text-green-700">Active</span>
+                    <div className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:py-1 bg-green-50 rounded-lg border border-green-200">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <span className="text-[10px] sm:text-xs font-semibold text-green-700">
+                        Active
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Content - Reduced padding for mobile */}
-                <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {/* Content - Heavily reduced padding */}
+                <div className="p-2.5 sm:p-3 md:p-4 space-y-2.5 sm:space-y-3 md:space-y-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
                     <div className="text-left">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-0.5">
                         ${dashboardStats.revenue.toLocaleString()}
                       </div>
-                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                      <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide font-medium mb-0.5">
                         REVENUE THIS WEEK
                       </div>
-                      <div className="flex items-center gap-1 text-xs sm:text-sm text-green-600 font-semibold">
+                      <div className="flex items-center gap-0.5 text-[10px] sm:text-xs text-green-600 font-semibold">
                         <span>↑</span>
                         <span>20% from last week</span>
                       </div>
                     </div>
-                    <div className="text-left border-l border-gray-200 pl-4 sm:pl-6">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+                    <div className="text-left border-l border-gray-200 pl-2 sm:pl-3 md:pl-4">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-0.5">
                         {dashboardStats.calls}
                       </div>
-                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
+                      <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide font-medium">
                         CALLS
                       </div>
                     </div>
-                    <div className="text-left border-l border-gray-200 pl-4 sm:pl-6">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+                    <div className="text-left border-l border-gray-200 pl-2 sm:pl-3 md:pl-4">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-0.5">
                         {dashboardStats.messages}
                       </div>
-                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
+                      <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide font-medium">
                         MESSAGES
                       </div>
                     </div>
-                    <div className="text-left border-l border-gray-200 pl-4 sm:pl-6">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+                    <div className="text-left border-l border-gray-200 pl-2 sm:pl-3 md:pl-4">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-0.5">
                         {dashboardStats.emails.toLocaleString()}
                       </div>
-                      <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-medium">
+                      <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide font-medium">
                         EMAILS
                       </div>
                     </div>
                   </div>
 
-                  {/* Two-column layout: Insights & Conversations - Stack on mobile */}
-                  <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-                    {/* Left: What Movo Learned - Added mobile margin top */}
-                    <div className="md:border-r border-gray-200 md:pr-4 sm:md:pr-6 mt-4 md:mt-0">
-                      <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
-                        <span className="text-base sm:text-xl">💡</span>
-                        <h4 className="text-sm sm:text-base font-bold text-gray-900">What Movo Learned This Week</h4>
+                  {/* Two-column layout: Insights & Conversations */}
+                  <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+                    {/* Left: What Movo Learned */}
+                    <div className="md:border-r border-gray-200 md:pr-3 sm:md:pr-4 mt-2 md:mt-0">
+                      <div className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
+                        <span className="text-sm sm:text-base">💡</span>
+                        <h4 className="text-xs sm:text-sm font-bold text-gray-900">
+                          What Movo Learned This Week
+                        </h4>
                       </div>
-                      <ul className="space-y-1.5 sm:space-y-2.5 text-xs sm:text-sm text-gray-700">
-                        <li className="flex items-start gap-1.5 sm:gap-2">
+                      <ul className="space-y-1 sm:space-y-1.5 text-[10px] sm:text-xs text-gray-700">
+                        <li className="flex items-start gap-1 sm:gap-1.5">
                           <span className="text-gray-400 flex-shrink-0">•</span>
-                          <span>Parents ask most about 'Saturday programs'</span>
+                          <span>
+                            Parents ask most about 'Saturday programs'
+                          </span>
                         </li>
-                        <li className="flex items-start gap-1.5 sm:gap-2">
+                        <li className="flex items-start gap-1 sm:gap-1.5">
                           <span className="text-gray-400 flex-shrink-0">•</span>
                           <span>Peak call times: 4–8pm</span>
                         </li>
-                        <li className="flex items-start gap-1.5 sm:gap-2">
+                        <li className="flex items-start gap-1 sm:gap-1.5">
                           <span className="text-gray-400 flex-shrink-0">•</span>
-                          <span>Best conversion script: "Would you like to book a free trial?"</span>
+                          <span>
+                            Best conversion script: "Would you like to book a
+                            free trial?"
+                          </span>
                         </li>
-                        <li className="flex items-start gap-1.5 sm:gap-2">
+                        <li className="flex items-start gap-1 sm:gap-1.5">
                           <span className="text-blue-600 flex-shrink-0">•</span>
                           <span className="font-medium">
-                            Most booked program: "Youth Development League (Ages 8–10)"
+                            Most booked program: "Youth Development League (Ages
+                            8–10)"
                           </span>
                         </li>
                       </ul>
                     </div>
 
-                    {/* Right: Recent Conversations - Hidden on mobile with md:block */}
-                    <div className="hidden md:block md:pl-4 sm:md:pl-6">
-                      <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-4">
+                    {/* Right: Recent Conversations - Hidden on mobile */}
+                    <div className="hidden md:block md:pl-3 sm:md:pl-4">
+                      <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-1.5 sm:mb-2">
                         Recent Conversations
                       </h4>
-                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
-                        <div className="text-xs sm:text-sm text-gray-700">
+                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-2">
+                        <div className="text-[10px] sm:text-xs text-gray-700">
                           <p>Hi Jessica! Yes, we have two options:</p>
                         </div>
-                        <div className="bg-blue-500 text-white rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm">
+                        <div className="bg-blue-500 text-white rounded-lg px-2 sm:px-2.5 py-1.5 sm:py-2 text-[10px] sm:text-xs">
                           Saturday 10am or Wednesday 4pm.
                         </div>
-                        <div className="text-xs sm:text-sm text-gray-700">
+                        <div className="text-[10px] sm:text-xs text-gray-700">
                           <p>Saturday works!</p>
                         </div>
-                        <div className="flex items-center gap-2 bg-white border border-green-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 mt-2 sm:mt-3">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-[10px] sm:text-xs font-bold">✓</span>
+                        <div className="flex items-center gap-1.5 bg-white border border-green-200 rounded-lg px-2 py-1.5 mt-1.5 sm:mt-2">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-xs sm:text-sm">
+                              ✓
+                            </span>
                           </div>
                           <div className="flex-1">
-                            <p className="text-xs sm:text-sm font-semibold text-gray-900">Trial booked</p>
-                            <p className="text-[10px] sm:text-xs text-gray-600">$150 revenде</p>
+                            <p className="text-[10px] sm:text-xs font-semibold text-gray-900">
+                              Trial booked
+                            </p>
+                            <p className="text-[9px] sm:text-xs text-gray-600">
+                              $150 revenue
+                            </p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Revenue Growth Chart - Compact on mobile */}
-
-                  {/* Connected Systems - Compact on mobile */}
-                  <div className="border-t border-gray-200 pt-3 sm:pt-4 md:pt-6">
-                    <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-4">Connected Systems</h4>
-                    <div className="flex flex-wrap gap-2 sm:gap-3">
-                      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white rounded-lg border border-gray-200">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-700">IClassPro</span>
+                  {/* Connected Systems */}
+                  <div className="border-t border-gray-200 pt-2 sm:pt-2.5 md:pt-3">
+                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-1.5 sm:mb-2">
+                      Connected Systems
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 bg-white rounded-lg border border-gray-200">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-700">
+                          IClassPro
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white rounded-lg border border-gray-200">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-700">Stripe</span>
+                      <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 bg-white rounded-lg border border-gray-200">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-700">
+                          Stripe
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white rounded-lg border border-gray-200">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full"></div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-700">Google Calendar</span>
+                      <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 bg-white rounded-lg border border-gray-200">
+                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-700">
+                          Google Calendar
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -921,7 +1679,10 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <section id="solution" className="py-32 bg-gradient-to-b from-blue-50 to-white">
+      <section
+        id="solution"
+        className="py-32 bg-gradient-to-b from-blue-50 to-white"
+      >
         <div className="max-w-[1400px] mx-auto px-8 md:px-16">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-7xl font-serif text-gray-900 mb-6 leading-tight">
@@ -930,7 +1691,8 @@ export default function Home() {
               <span className="text-gray-400 italic">Automatically</span>
             </h2>
             <p className="text-xl text-gray-600 leading-relaxed mb-10">
-              Movo turns every missed call, old lead, and empty slot into new revenue - without you lifting a finger.
+              Movo turns every missed call, old lead, and empty slot into new
+              revenue - without you lifting a finger.
             </p>
           </div>
 
@@ -941,7 +1703,7 @@ export default function Home() {
                 <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                 Drives New Revenue
               </span>
-              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Capture every opportunity</span>
+              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0"></span>
             </h3>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -950,10 +1712,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 md:p-6 relative overflow-hidden">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-green-500 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 animate-pulse w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">💰</span>
-                      <span>+$2,300 booked</span>
-                    </div>
+
                     <div className="flex items-center justify-center mb-3 md:mb-4 mt-8 md:mt-6">
                       <div className="w-16 md:w-20 h-16 md:h-20 bg-gray-900 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <Phone className="w-8 md:w-10 h-8 md:h-10 text-white" />
@@ -963,14 +1722,16 @@ export default function Home() {
                       Handled by Movo
                     </div>
                     <div className="mt-3 md:mt-4 text-center text-xs md:text-sm text-gray-600">
-                      247 calls answered this month
+                      8,047 calls answered this month
                     </div>
                   </div>
                 </div>
-                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Never Miss a Call</h4>
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+                  Never Miss a Call
+                </h4>
                 <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
-                  Every parent gets answered instantly - even after hours. Movo never lets an opportunity go to
-                  voicemail.
+                  Every parent gets answered instantly - even after hours. Movo
+                  never lets an opportunity go to voicemail.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500">
                   "Peace of mind - no more lost signups" - Supreme Hoops
@@ -982,31 +1743,39 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 md:p-6 space-y-4 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-purple-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">💬</span>
-                      <span>47% conversion</span>
-                    </div>
+
                     <div className="bg-white p-3 md:p-4 rounded-lg shadow-sm mt-8 md:mt-6">
-                      <div className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">Text from Movo:</div>
+                      <div className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">
+                        Text from Movo:
+                      </div>
                       <div className="text-xs md:text-sm font-medium text-gray-900 mb-2 md:mb-3">
                         "Hey, we have one last spot for this week — want it?"
                       </div>
                       <div className="flex items-center justify-center my-2 md:my-3">
                         <div className="w-7 md:w-8 bg-green-500 rounded-full flex items-center justify-center shadow">
-                          <span className="text-white text-xs md:text-sm">✓</span>
+                          <span className="text-white text-xs md:text-sm">
+                            ✓
+                          </span>
                         </div>
                       </div>
-                      <div className="text-[10px] md:text-xs text-gray-500 mb-1">Parent replied:</div>
-                      <div className="text-xs md:text-sm font-medium text-gray-900">"Yes! Book it please"</div>
+                      <div className="text-[10px] md:text-xs text-gray-500 mb-1">
+                        Parent replied:
+                      </div>
+                      <div className="text-xs md:text-sm font-medium text-gray-900">
+                        "Yes! Book it please"
+                      </div>
                       <div className="text-[10px] md:text-xs text-green-700 font-semibold mt-1.5 md:mt-2">
                         ✓ Reactivated Parent
                       </div>
                     </div>
                   </div>
                 </div>
-                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Re-Engage Old Leads</h4>
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+                  Re-Engage Old Leads
+                </h4>
                 <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
-                  Movo follows up automatically with families who asked months ago - and gets them to finally sign up.
+                  Movo follows up automatically with families who asked months
+                  ago - and gets them to finally sign up.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500">
                   "Wow, it even remembers the ones I forgot" - Haifa Swim{" "}
@@ -1022,7 +1791,6 @@ export default function Home() {
                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                 Closes Every Conversation
               </span>
-              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Turn calls into enrollments</span>
             </h3>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -1031,13 +1799,12 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-orange-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">📈</span>
-                      <span>+85% fill rate</span>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
+
+                    <div className="bg-white rounded-lg p-3 md:p-4 rounded-lg shadow-sm mt-8 md:mt-6">
                       <div className="flex items-center justify-between mb-2 md:mb-3">
-                        <div className="text-sm md:text-base font-semibold text-gray-900">Tues 5 PM Swim</div>
+                        <div className="text-sm md:text-base font-semibold text-gray-900">
+                          Tues 5 PM Swim
+                        </div>
                         <div className="text-[10px] md:text-xs font-bold text-green-700 bg-green-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
                           FULL ✅
                         </div>
@@ -1045,7 +1812,9 @@ export default function Home() {
                       <div className="text-[10px] md:text-xs font-bold text-green-700 bg-green-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
                         FULL ✅
                       </div>
-                      <div className="text-[10px] md:text-xs text-gray-600 mb-1.5 md:mb-2">11/12 spots filled</div>
+                      <div className="text-[10px] md:text-xs text-gray-600 mb-1.5 md:mb-2">
+                        11/12 spots filled
+                      </div>
                       <div className="w-full bg-gray-100 rounded-full h-2.5 md:h-3 mb-1.5 md:mb-2">
                         <div
                           className="bg-gradient-to-r from-green-500 to-green-600 h-2.5 md:h-3 rounded-full shadow"
@@ -1058,13 +1827,16 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Fill Every Program</h4>
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+                  Fill Every Program
+                </h4>
                 <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
-                  Movo knows which classes have openings and actively promotes them to interested parents - until
-                  they're full.
+                  Movo knows which classes have openings and actively promotes
+                  them to interested parents - until they're full.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500">
-                  "It actually sells my classes for me" - MPAC Sports
+                  "It actually sells my classes for me" - Elite Baseball
+                  Training
                 </p>
               </div>
 
@@ -1073,26 +1845,29 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-indigo-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">🧠</span>
-                      <span>+72% lift</span>
-                    </div>
+
                     <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
                       <div className="text-[10px] md:text-xs font-semibold text-gray-500 mb-1.5 md:mb-2">
                         Top Converting Offer
                       </div>
-                      <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">"Free Trial"</div>
-                      <div className="text-xs md:text-sm text-green-700 font-medium">Converts 72% better</div>
+                      <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                        "Free Trial"
+                      </div>
+                      <div className="text-xs md:text-sm text-green-700 font-medium">
+                        Converts 72% better
+                      </div>
                       <div className="text-[10px] md:text-xs text-gray-500 mt-2 md:mt-3 italic">
                         Discovers best offers automatically
                       </div>
                     </div>
                   </div>
                 </div>
-                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Learn What Converts</h4>
+                <h4 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+                  Learn What Converts
+                </h4>
                 <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3">
-                  Movo analyzes every conversation and learns what words close more trials - constantly improving
-                  performance.
+                  Movo analyzes every conversation and learns what words close
+                  more trials - constantly improving performance.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500">
                   "It gets better - I don't have to micromanage" - Haifa Swim
@@ -1108,7 +1883,6 @@ export default function Home() {
                 <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                 Handles Everything Else
               </span>
-              <span className="text-gray-400 font-normal text-xl ml-5 md:ml-0">→ Runs on autopilot</span>
             </h3>
             {/* Centered the single card using mx-auto */}
             <div className="max-w-2xl mx-auto">
@@ -1117,21 +1891,31 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-teal-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-                      ⚙️ 10+ hrs saved
-                    </div>
+
                     <div className="grid grid-cols-3 gap-2 md:gap-3 mt-8 md:mt-6">
                       <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform">
-                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">💳</div>
-                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">Payments</div>
+                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">
+                          💳
+                        </div>
+                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">
+                          Payments
+                        </div>
                       </div>
                       <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform delay-75">
-                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">📅</div>
-                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">Scheduling</div>
+                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">
+                          📅
+                        </div>
+                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">
+                          Scheduling
+                        </div>
                       </div>
                       <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform delay-150">
-                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">📧</div>
-                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">Follow-ups</div>
+                        <div className="text-xl md:text-2xl mb-0.5 md:mb-1">
+                          📧
+                        </div>
+                        <div className="text-[10px] md:text-xs font-semibold text-gray-700">
+                          Follow-ups
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 md:mt-4 text-center">
@@ -1146,8 +1930,8 @@ export default function Home() {
                   Everything, Automatically
                 </h3>
                 <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2 md:mb-3 text-center">
-                  Movo syncs payments, follow-ups, and schedules - so your team can focus on coaching, not chasing
-                  parents.
+                  Movo syncs payments, follow-ups, and schedules - so your team
+                  can focus on coaching, not chasing parents.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500 text-center">
                   "Freedom - I can finally breathe."
@@ -1159,9 +1943,10 @@ export default function Home() {
           {/* CTA */}
           <div className="text-center mt-20">
             <a
-              href="https://calendly.com/ari-movoai/30min"
+              href="https://calendly.com/ari-movo/30min"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => {}}
               className="inline-block px-10 py-5 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer"
             >
               Book a demo
@@ -1177,48 +1962,34 @@ export default function Home() {
             {/* Left - Headline and subheadline with CTA */}
             <div>
               <h2 className="text-5xl md:text-6xl lg:text-7xl font-serif text-gray-900 leading-tight mb-6">
-                The Numbers <span className="text-gray-400 italic">Don't Lie.</span>
+                The Numbers{" "}
+                <span className="text-gray-400 italic">Don't Lie.</span>
               </h2>
               <p className="text-lg text-gray-600 leading-relaxed mb-10">
                 Every academy using Movo sees new bookings within days -<br />
                 with no extra staff or marketing spend.
               </p>
+              {/* CHANGE: Updated to play audio directly instead of opening modal */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={handleHeroAudioPlay}
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
+                  onClick={() =>
+                    playProtectedAudio("hearMovo", audioRef, setIsPlaying)
+                  }
+                  className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
                 >
-                  <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
-                    {isHeroAudioPlaying ? (
-                      <div className="flex items-center gap-1">
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "16px", animationDelay: "0ms" }}
-                        ></div>
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "24px", animationDelay: "150ms" }}
-                        ></div>
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "14px", animationDelay: "300ms" }}
-                        ></div>
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "20px", animationDelay: "100ms" }}
-                        ></div>
-                      </div>
-                    ) : (
-                      <Play className="w-5 h-5" />
-                    )}
-                  </div>
-                  <span className="whitespace-nowrap">Hear Movo in Action</span>
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <Play className="w-5 h-5" />
+                  )}
+                  Hear Movo in Action
                 </button>
                 <a
-                  href="https://calendly.com/ari-movoai/30min"
+                  href="https://calendly.com/ari-movo/30min"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
+                  onClick={() => {}}
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-lg border-2 border-gray-900 transition-all duration-300 hover:shadow-xl"
                 >
                   Book a Demo
                 </a>
@@ -1265,32 +2036,53 @@ export default function Home() {
           <h2 className="text-5xl md:text-6xl lg:text-7xl font-serif text-gray-900 leading-tight mb-6">
             Parents are calling.
             <br />
-            <span className="text-gray-400 italic">Never miss a lead again.</span>
+            <span className="text-gray-400 italic">
+              Never miss a lead again.
+            </span>
           </h2>
           <p className="text-xl text-gray-600 leading-relaxed mb-12 max-w-2xl mx-auto">
-            Movo sells your programs while you coach - converting every conversation into a booked trial, a new
-            enrolment, or a spot filled.
+            Movo sells your programs while you coach - converting every
+            conversation into a booked trial, a new enrolment, or a spot filled.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             <button
-              onClick={() => setShowCallMe(true)}
+              onClick={() => {
+                // Removed posthog.capture call
+                setShowVapiPrefill(true);
+              }}
               className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
             >
-              <Phone className="w-5 h-5" />
-              Call Me
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-phone w-5 h-5"
+              >
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              Talk to Movo
             </button>
             <a
-              href="https://calendly.com/ari-movoai/30min"
+              href="https://calendly.com/ari-movo/30min"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => {}}
               className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
             >
               Book a Demo
             </a>
           </div>
 
-          <p className="text-sm text-gray-500">Most academies see results within the first 2 weeks.</p>
+          <p className="text-sm text-gray-500">
+            Most academies see results within the first 2 weeks.
+          </p>
         </div>
       </section>
       <ProblemSection />
@@ -1302,27 +2094,96 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-24 bg-white border-t border-gray-200">
         <div className="mx-auto max-w-7xl px-10">
-          {/* Moved disclaimer to bottom, copyright and links first */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <p className="text-gray-600">© 2025 Movo AI, Inc. All rights reserved.</p>
-            <div className="flex items-center gap-8">
-              <a href="/portal/login" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                Portal
+          <div className="flex flex-wrap items-center justify-between gap-6 mb-8">
+            <div>
+              <p className="text-gray-600">
+                © 2025 Movo AI, Inc. All rights reserved.
+              </p>
+            </div>
+
+            {/* Center - Social & Contact (remains centered) */}
+            <div className="flex items-center gap-6">
+              <a
+                href="https://www.instagram.com/movo.ai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {}}
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+                aria-label="Instagram"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </a>
-              <a href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                Terms
+              <a
+                href="mailto:contact@movoai.co"
+                onClick={() => {}}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                contact@movoai.co
               </a>
-              <a href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                Privacy
+            </div>
+
+            <div className="flex items-center gap-6">
+              <a
+                href="/terms"
+                onClick={() => {}}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Terms of Service
+              </a>
+              <a
+                href="/privacy"
+                onClick={() => {}}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Privacy Policy
               </a>
             </div>
           </div>
 
+          <div className="flex justify-center items-center gap-6 mt-8">
+            <img
+              src="/images/aicpa-soc-badge.png"
+              alt="AICPA SOC Certified"
+              className="h-20 w-auto"
+            />
+          </div>
+
           <div className="text-center pt-8 border-t border-gray-200">
             <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Movo AI automates communications and may use AI-generated voice or text responses. Conversations may be
-              recorded or analyzed to improve service quality, consistent with our{" "}
-              <a href="/privacy" className="text-gray-900 underline hover:text-gray-700 transition-colors">
+              By submitting your phone number above, you consent to the{" "}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Removed posthog.capture call
+                }}
+                className="text-gray-700 underline hover:text-gray-900"
+              >
+                Mobile Terms
+              </a>{" "}
+              and to receive automated calls (including AI-generated calls) and
+              texts from Movo AI at the number provided. Message and data rates
+              may apply. Frequency may vary. Reply STOP anytime to opt out of
+              texts. Consent is not a condition of purchase. See our{" "}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Removed posthog.capture call
+                }}
+                className="text-gray-700 underline hover:text-gray-900"
+              >
                 Privacy Policy
               </a>
               .
@@ -1334,16 +2195,22 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
             <button
-              onClick={() => setShowCallMe(false)}
+              onClick={() => {
+                // Removed posthog.capture call
+                setShowCallMe(false);
+              }}
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors text-2xl leading-none"
             >
               ✕
             </button>
 
             <div className="flex flex-col items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Get a Call from Movo</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Get a Call from Movo
+              </h2>
               <p className="text-gray-600 text-center leading-relaxed">
-                Fill in your info - Movo will call you instantly. See how it sells.
+                Fill in your info - Movo will call you instantly. See how it
+                sells.
               </p>
             </div>
 
@@ -1367,7 +2234,10 @@ export default function Home() {
               )}
 
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Name
                 </label>
                 <input
@@ -1375,7 +2245,9 @@ export default function Home() {
                   type="text"
                   placeholder="Jane Smith"
                   value={callMeForm.name}
-                  onChange={(e) => setCallMeForm({ ...callMeForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setCallMeForm({ ...callMeForm, name: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                   disabled={isSubmittingCall}
@@ -1383,7 +2255,10 @@ export default function Home() {
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Email
                 </label>
                 <input
@@ -1391,7 +2266,9 @@ export default function Home() {
                   type="email"
                   placeholder="jane@framer.com"
                   value={callMeForm.email}
-                  onChange={(e) => setCallMeForm({ ...callMeForm, email: e.target.value })}
+                  onChange={(e) =>
+                    setCallMeForm({ ...callMeForm, email: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                   disabled={isSubmittingCall}
@@ -1399,7 +2276,10 @@ export default function Home() {
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Phone Number
                 </label>
                 <input
@@ -1407,9 +2287,34 @@ export default function Home() {
                   type="tel"
                   placeholder="000-000-0000"
                   value={callMeForm.phone}
-                  onChange={(e) => setCallMeForm({ ...callMeForm, phone: e.target.value })}
+                  onChange={(e) =>
+                    setCallMeForm({ ...callMeForm, phone: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={isSubmittingCall}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="assistantId"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Assistant ID (optional)
+                </label>
+                <input
+                  id="assistantId"
+                  type="text"
+                  placeholder="Leave blank to use the default assistant"
+                  value={callMeForm.assistantId}
+                  onChange={(e) =>
+                    setCallMeForm({
+                      ...callMeForm,
+                      assistantId: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isSubmittingCall}
                 />
               </div>
@@ -1419,11 +2324,19 @@ export default function Home() {
                   id="newsletter"
                   type="checkbox"
                   checked={callMeForm.newsletter}
-                  onChange={(e) => setCallMeForm({ ...callMeForm, newsletter: e.target.checked })}
+                  onChange={(e) =>
+                    setCallMeForm({
+                      ...callMeForm,
+                      newsletter: e.target.checked,
+                    })
+                  }
                   className="mt-1 w-5 h-5 text-teal-600 border-gray-300 rounded focus:ring-2 focus:ring-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isSubmittingCall}
                 />
-                <label htmlFor="newsletter" className="text-sm text-gray-600 leading-relaxed cursor-pointer">
+                <label
+                  htmlFor="newsletter"
+                  className="text-sm text-gray-600 leading-relaxed cursor-pointer"
+                >
                   I agree to get a call from Movo
                 </label>
               </div>
@@ -1431,13 +2344,29 @@ export default function Home() {
               <div className="pt-2 pb-2">
                 <p className="text-xs text-gray-500 leading-relaxed font-thin">
                   By submitting your phone number above, you consent to the{" "}
-                  <a href="#" className="text-gray-700 underline hover:text-gray-900">
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Removed posthog.capture call
+                    }}
+                    className="text-gray-700 underline hover:text-gray-900"
+                  >
                     Mobile Terms
                   </a>{" "}
-                  and to receive automated calls (including AI-generated calls) and texts from Movo AI at the number
-                  provided. Message and data rates may apply. Frequency may vary. Reply STOP anytime to opt out of
-                  texts. Consent is not a condition of purchase. See our{" "}
-                  <a href="#" className="text-gray-700 underline hover:text-gray-900">
+                  and to receive automated calls (including AI-generated calls)
+                  and texts from Movo AI at the number provided. Message and
+                  data rates may apply. Frequency may vary. Reply STOP anytime
+                  to opt out of texts. Consent is not a condition of purchase.
+                  See our{" "}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Removed posthog.capture call
+                    }}
+                    className="text-gray-700 underline hover:text-gray-900"
+                  >
                     Privacy Policy
                   </a>
                   .
@@ -1481,37 +2410,230 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showHearMovo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-white rounded-sm p-8 max-w-md w-full">
-            <button
-              onClick={() => setShowHearMovo(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+
+      {/* Error notification toast */}
+      {webCallError && !isWebCallActive && !isWebCallConnecting && (
+        <div className="fixed bottom-24 right-6 z-50 max-w-sm rounded-lg bg-rose-500/90 text-white px-4 py-3 text-sm shadow-lg backdrop-blur-sm border border-rose-400/20">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              ✕
-            </button>
-            <h2 className="text-2xl font-bold mb-4">Hear Movo Sell</h2>
-            <p className="text-gray-600 mb-6">Listen to how Movo handles a real parent inquiry</p>
-            <audio
-              ref={audioRef}
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav"
-              className="hidden"
-            />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="font-medium mb-1">Call Failed</p>
+              <p className="text-white/90 text-xs">{webCallError}</p>
+            </div>
             <button
-              onClick={handlePlayAudio}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#D97948] hover:bg-[#C96838] text-white rounded-sm"
+              onClick={() => {
+                setWebCallError(null);
+                setHasVapiAccess(false);
+              }}
+              className="text-white/80 hover:text-white transition"
             >
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-              {isPlaying ? "Pause" : "Play"} Audio
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
-            {audioProgress > 0 && (
-              <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-[#D97948] h-2 rounded-full transition-all" style={{ width: `${audioProgress}%` }} />
+          </div>
+        </div>
+      )}
+      {/* Hidden audio element for "Hear Movo in Action" button */}
+      <audio
+        ref={audioRef} // Changed from heroAudioRef to audioRef for general audio playback
+        onTimeUpdate={() => {
+          if (audioRef.current) {
+            // Ensure audioRef.current is not null and duration is valid before calculating progress
+            if (
+              !audioRef.current ||
+              isNaN(audioRef.current.duration) ||
+              audioRef.current.duration === 0
+            )
+              return;
+            const progress =
+              (audioRef.current.currentTime / audioRef.current.duration) * 100;
+            setAudioProgress(progress);
+          }
+        }}
+        onEnded={() => {
+          setIsPlaying(false);
+          setAudioProgress(0);
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        controlsList="nodownload"
+      />
+
+      {/* CHANGE: Adding missing Vapi prefill form modal */}
+      {showVapiPrefill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                  BEFORE YOU START
+                </p>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  Share a few details
+                </h2>
+                <p className="text-gray-500">
+                  We'll use this so Movo can personalize the conversation.
+                </p>
               </div>
-            )}
+              <button
+                onClick={() => setShowVapiPrefill(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleVapiPrefillSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="vapi-name"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  NAME
+                </label>
+                <input
+                  id="vapi-name"
+                  type="text"
+                  value={vapiUserInfo.name}
+                  onChange={(e) =>
+                    setVapiUserInfo({ ...vapiUserInfo, name: e.target.value })
+                  }
+                  placeholder="Alex Johnson"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="vapi-email"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  EMAIL
+                </label>
+                <input
+                  id="vapi-email"
+                  type="email"
+                  value={vapiUserInfo.email}
+                  onChange={(e) =>
+                    setVapiUserInfo({ ...vapiUserInfo, email: e.target.value })
+                  }
+                  placeholder="you@academy.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="vapi-phone"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  PHONE
+                </label>
+                <input
+                  id="vapi-phone"
+                  type="tel"
+                  value={vapiUserInfo.phone}
+                  onChange={(e) =>
+                    setVapiUserInfo({ ...vapiUserInfo, phone: e.target.value })
+                  }
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input
+                  id="vapi-consent"
+                  type="checkbox"
+                  checked={vapiConsentChecked}
+                  onChange={(e) => setVapiConsentChecked(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-[#D97948] border-gray-300 rounded focus:ring-[#D97948]"
+                  required
+                />
+                <label
+                  htmlFor="vapi-consent"
+                  className="text-xs text-gray-500 leading-relaxed"
+                >
+                  I agree to receive automated robocall and SMS messages from
+                  Movo AI related to my inquiry or reservation. Message and data
+                  rates may apply. Frequency varies. Reply STOP to opt out or
+                  HELP for help. Consent is not a condition of purchase. You
+                  also agree to our{" "}
+                  <a
+                    href="https://www.movoai.co/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-700"
+                  >
+                    Privacy Policy
+                  </a>{" "}
+                  and our{" "}
+                  <a
+                    href="https://www.movoai.co/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-700"
+                  >
+                    Terms of Service
+                  </a>
+                  .
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={
+                  !vapiUserInfo.name ||
+                  !vapiUserInfo.email ||
+                  !vapiUserInfo.phone ||
+                  !vapiConsentChecked ||
+                  isWebCallConnecting
+                }
+                className="w-full py-3 bg-[#D97948] hover:bg-[#C96838] text-white font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isWebCallConnecting ? "Connecting..." : "Start Call"}
+              </button>
+            </form>
           </div>
         </div>
       )}
     </>
-  )
+  );
 }

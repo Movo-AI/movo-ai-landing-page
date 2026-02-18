@@ -11,13 +11,13 @@ A modern landing page for Movo AI, a best-in-class AI operating system for sport
 
 ### Installation
 
-```bash
+\`\`\`bash
 # Install dependencies
 pnpm install
 
 # Run development server
 pnpm dev
-```
+\`\`\`
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
@@ -41,9 +41,9 @@ If not set, the form defaults to `https://movo-backend-jet.vercel.app`.
 **Setup**:
 Create a `.env.local` file in the root directory (optional, only if you want to override the default):
 
-```env
+\`\`\`env
 NEXT_PUBLIC_API_BASE_URL=https://movo-backend-jet.vercel.app
-```
+\`\`\`
 
 For production, you can set this in your deployment platform's environment variables if you need to override the default URL.
 
@@ -51,7 +51,7 @@ For production, you can set this in your deployment platform's environment varia
 
 ## Project Structure
 
-```
+\`\`\`
 ├── app/                    # Next.js App Router pages
 │   ├── interest-form/     # Contact form page
 │   ├── layout.tsx         # Root layout
@@ -63,7 +63,7 @@ For production, you can set this in your deployment platform's environment varia
 │   ├── phone.ts          # Phone number normalization utilities
 │   └── utils.ts          # General utilities
 └── public/               # Static assets
-```
+\`\`\`
 
 ## Features
 
@@ -90,7 +90,7 @@ A beautiful, accessible contact form that:
 
 Run tests with Vitest:
 
-```bash
+\`\`\`bash
 # Run tests once
 pnpm test
 
@@ -99,7 +99,7 @@ pnpm test:watch
 
 # Run tests with UI
 pnpm test:ui
-```
+\`\`\`
 
 ## API Integration
 
@@ -108,7 +108,7 @@ The contact form integrates with a backend API endpoint:
 **Endpoint**: `POST https://movo-backend-jet.vercel.app/api/trigger-call` (or `${NEXT_PUBLIC_API_BASE_URL}/api/trigger-call` if env var is set)
 
 **Request Body**:
-```json
+\`\`\`json
 {
   "first_name": "John",
   "last_name": "Doe",
@@ -116,7 +116,7 @@ The contact form integrates with a backend API endpoint:
   "phone_number": "+15551234567",        // Optional (E.164 format with country code)
   "message": "User's message"
 }
-```
+\`\`\`
 
 **Success Response** (200):
 The form will show a success toast and reset.
@@ -142,15 +142,14 @@ The contact form includes:
 
 ## Build
 
-```bash
+\`\`\`bash
 # Build for production
 pnpm build
 
 # Start production server
 pnpm start
-```
+\`\`\`
 
 ## License
 
 Private - All rights reserved.
-
