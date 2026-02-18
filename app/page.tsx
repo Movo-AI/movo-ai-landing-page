@@ -3,8 +3,7 @@
 import type React from "react";
 
 import { useState, useEffect, useRef } from "react";
-import { Phone, Play, Pause } from "lucide-react";
-import posthog from "posthog-js";
+import { Phone, Pause, Play } from "lucide-react";
 import { Header } from "@/components/header";
 import { ProblemSection } from "@/components/problem-section";
 import { WhoItsFor } from "@/components/who-its-for";
@@ -13,6 +12,7 @@ import { UseCaseStory } from "@/components/use-case-story";
 import { LiveActivity } from "@/components/live-activity";
 import { FinalCTA } from "@/components/final-cta";
 import { SuccessStoriesSection } from "@/components/success-stories-section";
+import { containsUnsafeLanguage } from "@/lib/moderation";
 
 export default function Home() {
   const [showCallMe, setShowCallMe] = useState(false);
@@ -22,25 +22,241 @@ export default function Home() {
   const [isHeroAudioPlaying, setIsHeroAudioPlaying] = useState(false);
   const [isLearnVideoPlaying, setIsLearnVideoPlaying] = useState(false);
 
-  // Helper function to track clicks with rich metadata
+  const [isCallConnecting, setIsCallConnecting] = useState(false);
+  const [isCallActive, setIsCallActive] = useState(false);
+
+  // Web call via Vapi Web SDK
+  const [isWebCallConnecting, setIsWebCallConnecting] = useState(false);
+  const [isWebCallActive, setIsWebCallActive] = useState(false);
+  const [webCallError, setWebCallError] = useState<string | null>(null);
+  const [webTranscripts, setWebTranscripts] = useState<
+    { role: string; text: string; id: number }[]
+  >([]);
+  const vapiRef = useRef<any | null>(null);
+  const vapiEventHandlersRef = useRef<
+    { event: string; handler: (...args: any[]) => void }[]
+  >([]);
+  const vapiCallInfoRef = useRef<{ email: string; name: string } | null>(null); // Store email and name for the current pending call
+  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
+  const assistantSpeakingTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  // Normalize error messages to be human-readable
+  const normalizeCallError = (error: any): string => {
+    if (!error) {
+      return "Unable to start the call. Please try again.";
+    }
+
+    const errorMessage = error?.message || error?.toString() || "";
+    const errorString = errorMessage.toLowerCase();
+
+    // Network/connection errors
+    if (
+      errorString.includes("network") ||
+      errorString.includes("fetch") ||
+      errorString.includes("connection") ||
+      errorString.includes("failed to fetch")
+    ) {
+      return "Connection failed. Please check your internet connection and try again.";
+    }
+
+    // Permission/access errors
+    if (
+      errorString.includes("permission") ||
+      errorString.includes("access") ||
+      errorString.includes("unauthorized") ||
+      errorString.includes("forbidden")
+    ) {
+      return "Unable to access your microphone. Please check your browser permissions and try again.";
+    }
+
+    // SDK/initialization errors
+    if (
+      errorString.includes("sdk") ||
+      errorString.includes("not available") ||
+      errorString.includes("not initialized")
+    ) {
+      return "Unable to initialize the call. Please refresh the page and try again.";
+    }
+
+    // Timeout errors
+    if (errorString.includes("timeout") || errorString.includes("timed out")) {
+      return "The call took too long to connect. Please try again.";
+    }
+
+    // Rate limiting
+    if (
+      errorString.includes("rate limit") ||
+      errorString.includes("too many requests")
+    ) {
+      return "Too many requests. Please wait a moment and try again.";
+    }
+
+    // Generic API errors
+    if (
+      errorString.includes("bad request") ||
+      errorString.includes("400") ||
+      errorString.includes("500") ||
+      errorString.includes("server error")
+    ) {
+      return "Something went wrong on our end. Please try again in a moment.";
+    }
+
+    // Default fallback
+    return "Unable to start the call. Please try again.";
+  };
+
+  // Prefill info before allowing Vapi widget usage
+  const [showVapiPrefill, setShowVapiPrefill] = useState(false);
+  const [hasVapiAccess, setHasVapiAccess] = useState(false);
+  const [vapiUserInfo, setVapiUserInfo] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [vapiConsentChecked, setVapiConsentChecked] = useState(true); // CHANGE: Set consent checkbox to checked by default
+
   const trackClick = (
     elementType: string,
     elementText: string,
     section: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ) => {
-    posthog.capture("button_click", {
-      element_type: elementType, // 'button', 'link', 'cta', etc.
-      element_text: elementText,
-      section: section, // 'hero', 'features', 'footer', etc.
-      page_url: window.location.pathname,
-      ...metadata,
-    });
+    // Removed posthog.capture call
   };
-  const learnVideoRef = useRef<HTMLAudioElement>(null);
+  const learnVideoRef = useRef<HTMLAudioElement | null>(null);
   const heroAudioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioProgress, setAudioProgress] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const audioDataRef = useRef<{
+    learnAudio: Blob | null;
+    hearMovoAudio: Blob | null;
+  }>({
+    learnAudio: null,
+    hearMovoAudio: null,
+  });
+
+  useEffect(() => {
+    const loadProtectedAudio = async () => {
+      try {
+        // Fetch audio data but don't create URLs yet - keep as blobs in memory
+        const [learnResponse, hearResponse] = await Promise.all([
+          fetch(
+            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3",
+          ),
+          fetch(
+            "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3",
+          ),
+        ]);
+
+        audioDataRef.current = {
+          learnAudio: await learnResponse.blob(),
+          hearMovoAudio: await hearResponse.blob(),
+        };
+      } catch (error) {
+        console.error("[v0] Error loading audio:", error);
+      }
+    };
+
+    loadProtectedAudio();
+  }, []);
+
+  const playProtectedAudio = (
+    audioType: "learn" | "hearMovo",
+    refToUse: React.MutableRefObject<HTMLAudioElement | null>,
+    setPlayingState: (playing: boolean) => void,
+  ) => {
+    const blob =
+      audioType === "learn"
+        ? audioDataRef.current.learnAudio
+        : audioDataRef.current.hearMovoAudio;
+
+    if (!blob) return;
+
+    // If already playing, pause and clean up
+    if (refToUse.current) {
+      refToUse.current.pause();
+      const oldUrl = refToUse.current.src;
+      refToUse.current.src = "";
+      refToUse.current.remove();
+      refToUse.current = null;
+      if (oldUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(oldUrl);
+      }
+      setPlayingState(false);
+      return;
+    }
+
+    // Create temporary audio element dynamically
+    const audio = new Audio();
+    const blobUrl = URL.createObjectURL(blob);
+
+    audio.src = blobUrl;
+    audio.oncontextmenu = (e) => e.preventDefault();
+
+    audio.onended = () => {
+      setPlayingState(false);
+      URL.revokeObjectURL(blobUrl);
+      audio.remove();
+      refToUse.current = null;
+    };
+
+    if (audioType === "hearMovo") {
+      audio.ontimeupdate = () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+          const progress = (audio.currentTime / audio.duration) * 100;
+          setAudioProgress(progress);
+        }
+      };
+    }
+
+    refToUse.current = audio;
+    audio.play().catch((err) => {
+      console.error("[v0] Playback error:", err);
+      setPlayingState(false);
+      URL.revokeObjectURL(blobUrl);
+      audio.remove();
+      refToUse.current = null;
+    });
+    setPlayingState(true);
+  };
+
+  const [hearMovoAudioUrl, setHearMovoAudioUrl] = useState<string>("");
+  const [learnAudioUrl, setLearnAudioUrl] = useState<string>(""); // Declared setLearnAudioUrl
+
+  useEffect(() => {
+    const createProtectedAudioUrls = async () => {
+      try {
+        // Fetch and create blob URL for "See Movo learn in action"
+        const learnResponse = await fetch(
+          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-uXeylgmtM3GZNuY005J9eQEFtnn1Gr.mp3",
+        );
+        const learnBlob = await learnResponse.blob();
+        const learnUrl = URL.createObjectURL(learnBlob);
+        setLearnAudioUrl(learnUrl);
+
+        // Fetch and create blob URL for "Hear Movo in Action"
+        const hearResponse = await fetch(
+          "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-7hLfV26n4xYEc4HwnL8l0vYld5D85o.mp3",
+        );
+        const hearBlob = await hearResponse.blob();
+        const hearUrl = URL.createObjectURL(hearBlob);
+        setHearMovoAudioUrl(hearUrl);
+      } catch (error) {
+        console.error("[v0] Error loading protected audio:", error);
+      }
+    };
+
+    createProtectedAudioUrls();
+
+    // Cleanup blob URLs on unmount
+    return () => {
+      if (learnAudioUrl) URL.revokeObjectURL(learnAudioUrl);
+      if (hearMovoAudioUrl) URL.revokeObjectURL(hearMovoAudioUrl);
+    };
+  }, []);
 
   const [isPhonePlaying, setIsPhonePlaying] = useState(false);
   const [phoneAudioProgress, setPhoneAudioProgress] = useState(0);
@@ -104,11 +320,180 @@ export default function Home() {
     name: "",
     email: "",
     phone: "",
+    assistantId: "",
     newsletter: true,
   });
   const [isSubmittingCall, setIsSubmittingCall] = useState(false);
   const [callError, setCallError] = useState<string | null>(null);
   const [callSuccess, setCallSuccess] = useState(false);
+
+  // Lazy-load Vapi Web SDK on client
+  useEffect(() => {
+    let mounted = true;
+
+    async function initVapi() {
+      if (typeof window === "undefined") return;
+      try {
+        const { default: Vapi } = await import("@vapi-ai/web");
+        if (!mounted) return;
+
+        const vapi = new Vapi("42e246dc-74d0-4145-9c99-07c17575f930");
+        vapiRef.current = vapi;
+
+        // Store handler references for cleanup
+        const handleCallStart = () => {
+          setIsWebCallConnecting(false);
+          setIsWebCallActive(true);
+
+          // Send email API call in the background when call is successfully connected
+          const callInfo = vapiCallInfoRef.current;
+          if (callInfo) {
+            // Extract first name from full name
+            const firstName = callInfo.name.trim().split(" ")[0] || "";
+            // Clear the ref immediately to prevent reuse
+            vapiCallInfoRef.current = null;
+            // Fire and forget - don't block execution
+            fetch(
+              "https://acuity-stub.vercel.app/api/v1/emails/send-template",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  from: "ari@trymovo.ai",
+                  fromName: "Ari Posner",
+                  templateId: "d-7637fbd58f1e4463a93cc96ced411788",
+                  cc: "ari@trymovo.ai",
+                  to: callInfo.email,
+                  dynamicTemplateData: {
+                    first_name: firstName,
+                  },
+                }),
+              },
+            ).catch((error) => {
+              console.error("[Email API] Failed to send email:", error);
+            });
+          }
+        };
+
+        const handleCallEnd = () => {
+          setIsWebCallActive(false);
+          setIsWebCallConnecting(false);
+          setHasVapiAccess(false);
+          setWebCallError(null);
+          // Clear call info ref if call ends (info was already consumed by handleCallStart if call connected)
+          vapiCallInfoRef.current = null;
+        };
+
+        const handleError = (error: any) => {
+          console.error("[Vapi] Web call error:", error);
+          setWebCallError(normalizeCallError(error));
+          setIsWebCallActive(false);
+          setIsWebCallConnecting(false);
+          // Note: Do not remove email from queue here to avoid double-removal
+          // - If call fails before connecting, promise rejection handlers (.catch/catch) will remove it
+          // - If call errors after connecting, handleCallStart already consumed the email
+          // Removing here would cause double-removal when vapi.start() rejects AND emits error event
+        };
+
+        const handleTranscript = (data: any) => {
+          if (!data?.transcript) return;
+          setWebTranscripts((prev) => [
+            ...prev,
+            {
+              role: data.role || "assistant",
+              text: data.transcript,
+              id: Date.now() + Math.random(),
+            },
+          ]);
+
+          // Drive assistant speaking animation
+          const isAssistant = (data.role || "assistant") !== "user";
+          if (isAssistant) {
+            setIsAssistantSpeaking(true);
+            if (assistantSpeakingTimeoutRef.current) {
+              clearTimeout(assistantSpeakingTimeoutRef.current);
+            }
+            assistantSpeakingTimeoutRef.current = setTimeout(() => {
+              setIsAssistantSpeaking(false);
+            }, 900);
+          }
+        };
+
+        // Register event listeners and store references in ref
+        vapi.on("call-start", handleCallStart);
+        vapiEventHandlersRef.current.push({
+          event: "call-start",
+          handler: handleCallStart,
+        });
+
+        vapi.on("call-end", handleCallEnd);
+        vapiEventHandlersRef.current.push({
+          event: "call-end",
+          handler: handleCallEnd,
+        });
+
+        vapi.on("error", handleError);
+        vapiEventHandlersRef.current.push({
+          event: "error",
+          handler: handleError,
+        });
+
+        vapi.on("transcript" as any, handleTranscript);
+        vapiEventHandlersRef.current.push({
+          event: "transcript",
+          handler: handleTranscript,
+        });
+      } catch (err) {
+        console.error("[Vapi] Failed to initialize Web SDK:", err);
+        setWebCallError(
+          "Unable to initialize the call experience. Please try again later.",
+        );
+      }
+    }
+
+    void initVapi();
+
+    return () => {
+      mounted = false;
+      try {
+        // Clean up timeout
+        if (assistantSpeakingTimeoutRef.current) {
+          clearTimeout(assistantSpeakingTimeoutRef.current);
+          assistantSpeakingTimeoutRef.current = null;
+        }
+
+        // Remove all event listeners
+        if (vapiRef.current && vapiEventHandlersRef.current.length > 0) {
+          vapiEventHandlersRef.current.forEach(({ event, handler }) => {
+            try {
+              // Try both 'off' and 'removeListener' methods (common event emitter patterns)
+              if (typeof vapiRef.current.off === "function") {
+                vapiRef.current.off(event, handler);
+              } else if (typeof vapiRef.current.removeListener === "function") {
+                vapiRef.current.removeListener(event, handler);
+              }
+            } catch (err) {
+              // Ignore errors when removing listeners
+              console.warn(
+                `[Vapi] Failed to remove listener for ${event}:`,
+                err,
+              );
+            }
+          });
+
+          // Clear the handlers array
+          vapiEventHandlersRef.current = [];
+
+          // Stop the call if active
+          vapiRef.current.stop?.();
+        }
+      } catch {
+        // ignore cleanup errors
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -140,59 +525,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (showHearMovo && audioRef.current) {
-      console.log("[v0] Hear Movo modal opened, attempting to play audio");
-      // Small delay to ensure modal is visible
-      setTimeout(() => {
-        const playPromise = audioRef.current?.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("[v0] Audio playback started successfully");
-              setIsPlaying(true);
-            })
-            .catch((error) => {
-              console.log("[v0] Auto-play prevented by browser:", error);
-              // Browser prevented autoplay, user needs to click play button
-              setIsPlaying(false);
-            });
-        }
-      }, 500);
-    } else if (!showHearMovo && audioRef.current) {
-      console.log("[v0] Modal closed, stopping audio");
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      setAudioProgress(0);
-    }
-  }, [showHearMovo]);
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: "0px",
-    };
-
-    const animateOnScroll = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("animate-in");
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(animateOnScroll, observerOptions);
-    const elements = document.querySelectorAll(".fade-on-scroll");
-    elements.forEach((el) => observer.observe(el));
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const updateProgress = () => {
+      if (!audio || isNaN(audio.duration) || audio.duration === 0) return; // Ensure duration is valid
       const progress = (audio.currentTime / audio.duration) * 100;
       setAudioProgress(progress);
     };
@@ -277,6 +614,7 @@ export default function Home() {
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
+      // Changed to audioRef for general audio playback
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
@@ -303,16 +641,29 @@ export default function Home() {
 
   const handleCallMeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🚀 handleCallMeSubmit called - NEW VERSION");
     setCallError(null);
     setCallSuccess(false);
-    setIsSubmittingCall(true);
 
-    console.log("Submitting call request:", {
-      name: callMeForm.name,
-      email: callMeForm.email,
-      phone: callMeForm.phone,
-    });
+    const submittedText = [
+      callMeForm.name,
+      callMeForm.email,
+      callMeForm.phone,
+      callMeForm.assistantId,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    if (containsUnsafeLanguage(submittedText)) {
+      setCallError(
+        "We couldn't process your request. Please remove unsafe language and try again.",
+      );
+      // Removed posthog.capture call
+      return;
+    }
+
+    setIsSubmittingCall(true);
+    setIsCallConnecting(true);
+
+    const assistantId = callMeForm.assistantId.trim();
 
     try {
       const response = await fetch("/api/create-call", {
@@ -324,29 +675,26 @@ export default function Home() {
           name: callMeForm.name,
           email: callMeForm.email,
           phone: callMeForm.phone,
+          ...(assistantId ? { assistantId } : {}),
         }),
       });
 
-      console.log("API response status:", response.status);
-
       const data = await response.json();
-      console.log("API response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to initiate call");
       }
 
       setCallSuccess(true);
-      console.log("Call initiated successfully, callId:", data.callId);
+      setIsCallActive(true);
+      setIsCallConnecting(false);
 
-      // Extract metadata for analytics
+      setShowCallMe(false);
+
       const emailDomain = callMeForm.email.split("@")[1] || "unknown";
-
-      // Extract phone country code (handles +1, +44, etc.)
-      let phoneCountryCode = "+1"; // Default to US
+      let phoneCountryCode = "+1";
       const cleanedPhone = callMeForm.phone.replace(/[^\d+]/g, "");
       if (cleanedPhone.startsWith("+")) {
-        // Extract country code (typically 1-3 digits after +)
         const match = cleanedPhone.match(/^\+(\d{1,3})/);
         if (match) {
           phoneCountryCode = `+${match[1]}`;
@@ -357,15 +705,7 @@ export default function Home() {
 
       const firstName = callMeForm.name.trim().split(" ")[0] || "";
 
-      // Capture PostHog event
-      posthog.capture("call_request_submitted", {
-        call_id: data.callId,
-        email_domain: emailDomain,
-        phone_country_code: phoneCountryCode,
-        first_name: firstName,
-      });
-
-      // Send Slack notification (fire and forget - don't block on this)
+      // Removed posthog.capture call
       fetch("/api/notify-slack", {
         method: "POST",
         headers: {
@@ -381,25 +721,167 @@ export default function Home() {
           first_name: firstName,
         }),
       }).catch((error) => {
-        // Silently fail - we don't want to block the user experience
         console.error("Failed to send Slack notification:", error);
       });
 
-      // Reset form after a short delay
       setTimeout(() => {
-        setShowCallMe(false);
-        setCallMeForm({ name: "", email: "", phone: "", newsletter: true });
+        setIsCallActive(false);
+        setCallMeForm({
+          name: "",
+          email: "",
+          phone: "",
+          assistantId: "",
+          newsletter: true,
+        });
         setCallSuccess(false);
-      }, 2000);
+      }, 30000); // 30 seconds
     } catch (error) {
-      console.error("Error submitting call request:", error);
       setCallError(
         error instanceof Error
           ? error.message
-          : "Failed to initiate call. Please try again."
+          : "Failed to initiate call. Please try again.",
       );
+      setIsCallConnecting(false);
+      setIsCallActive(false);
     } finally {
       setIsSubmittingCall(false);
+    }
+  };
+
+  const handleVapiPrefillSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !vapiUserInfo.name ||
+      !vapiUserInfo.email ||
+      !vapiUserInfo.phone ||
+      !vapiConsentChecked
+    ) {
+      return;
+    }
+
+    // Prevent multiple simultaneous calls
+    if (isWebCallConnecting || isWebCallActive) {
+      return;
+    }
+
+    setWebCallError(null);
+    setIsWebCallConnecting(true);
+
+    // Store email and name for use in call-start event handler
+    vapiCallInfoRef.current = {
+      email: vapiUserInfo.email,
+      name: vapiUserInfo.name,
+    };
+
+    setHasVapiAccess(true);
+    setShowVapiPrefill(false);
+    setVapiConsentChecked(false);
+
+    // Fire Slack webhook similar to old call flow
+    const emailDomain = vapiUserInfo.email.split("@")[1] || "unknown";
+    let phoneCountryCode = "+1";
+    const cleanedPhone = vapiUserInfo.phone.replace(/[^\d+]/g, "");
+    if (cleanedPhone.startsWith("+")) {
+      const match = cleanedPhone.match(/^\+(\d{1,3})/);
+      if (match) {
+        phoneCountryCode = `+${match[1]}`;
+      }
+    } else if (cleanedPhone.startsWith("1") && cleanedPhone.length >= 11) {
+      phoneCountryCode = "+1";
+    }
+
+    const firstName = vapiUserInfo.name.trim().split(" ")[0] || "";
+
+    fetch("/api/notify-slack", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        call_id: `vapi-prefill-${Date.now()}`,
+        name: vapiUserInfo.name,
+        email: vapiUserInfo.email,
+        phone: vapiUserInfo.phone,
+        email_domain: emailDomain,
+        phone_country_code: phoneCountryCode,
+        first_name: firstName,
+      }),
+    }).catch((error) => {
+      console.error(
+        "Failed to send Slack notification for Vapi prefill:",
+        error,
+      );
+    });
+
+    // Start web call via Vapi Web SDK with assistant overrides
+    try {
+      if (!vapiRef.current) {
+        console.error(
+          "[Vapi] Web SDK instance not available when starting call",
+        );
+        setWebCallError(normalizeCallError({ message: "SDK not available" }));
+        setIsWebCallConnecting(false);
+        setIsWebCallActive(false);
+        setHasVapiAccess(false);
+        return;
+      }
+
+      vapiRef.current
+        .start("1baa4c19-196c-4c3f-ba9e-821035d17853", {
+          variableValues: {
+            first_name: firstName,
+            email_address: vapiUserInfo.email,
+          },
+          hooks: [
+            {
+              do: [{ type: "say", exact: [`${firstName}?`] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_1",
+              options: {
+                timeoutSeconds: 7,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+            {
+              do: [{ type: "say", exact: [`${firstName}, you there?`] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_2",
+              options: {
+                timeoutSeconds: 14,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+            {
+              do: [{ type: "say", exact: ["Did I scare you off?"] }],
+              on: "customer.speech.timeout",
+              name: "idle_message_3",
+              options: {
+                timeoutSeconds: 21,
+                triggerMaxCount: 1,
+                triggerResetMode: "onUserSpeech",
+              },
+            },
+          ],
+        })
+        .catch((error: any) => {
+          console.error("[Vapi] Error starting web call:", error);
+          setWebCallError(normalizeCallError(error));
+          setIsWebCallConnecting(false);
+          setIsWebCallActive(false);
+          setHasVapiAccess(false);
+          // Clear call info ref since call failed
+          vapiCallInfoRef.current = null;
+        });
+    } catch (error: any) {
+      console.error("[Vapi] Error starting web call:", error);
+      setWebCallError(normalizeCallError(error));
+      setIsWebCallConnecting(false);
+      setIsWebCallActive(false);
+      setHasVapiAccess(false);
+      // Clear call info ref since call failed
+      vapiCallInfoRef.current = null;
     }
   };
 
@@ -419,9 +901,8 @@ export default function Home() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (audioRef.current && isPlaying) {
-        // The error was here: `audio` was used instead of `audioRef.current`
         const audio = audioRef.current;
-        if (!audio) return; // Added safety check
+        if (!audio || isNaN(audio.duration) || audio.duration === 0) return; // Added safety check
         const progress = (audio.currentTime / audio.duration) * 100;
         setAudioProgress(progress);
       }
@@ -435,6 +916,7 @@ export default function Home() {
     if (!audio) return;
 
     const updateProgress = () => {
+      if (!audio || isNaN(audio.duration) || audio.duration === 0) return; // Ensure duration is valid
       const progress = (audio.currentTime / audio.duration) * 100;
       setPhoneAudioProgress(progress);
     };
@@ -482,7 +964,7 @@ export default function Home() {
   useEffect(() => {
     // Dummy calculation for now, replace with actual logic if needed
     setCalculatedRevenue(
-      (missedCalls * (conversionRate / 100) * avgEnrollment) / 1000
+      (missedCalls * (conversionRate / 100) * avgEnrollment) / 1000,
     );
   }, [missedCalls, conversionRate, avgEnrollment]);
 
@@ -548,7 +1030,7 @@ export default function Home() {
           "[v0] Dashboard intersection:",
           entry.isIntersecting,
           "Already visible:",
-          isDashboardVisible
+          isDashboardVisible,
         );
 
         if (entry.isIntersecting && !isDashboardVisible) {
@@ -624,7 +1106,7 @@ export default function Home() {
 
     const observer = new IntersectionObserver(
       animateDashboard,
-      observerOptions
+      observerOptions,
     );
     if (dashboardRef.current) {
       console.log("[v0] Observer attached to dashboard");
@@ -710,7 +1192,7 @@ export default function Home() {
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage:
-              "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%209%202025%20%283%29-8bYxHxAQ0hnWrqQq3P4GKmM3DkXslx.png)",
+              "url(/images/kids-20playing-20sport-20graphic-20nov-209-202025-20-283-29.png)",
           }}
         />
 
@@ -731,64 +1213,32 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3 sm:gap-4 justify-center px-4">
-            <a
-              href="https://calendly.com/ari-movoai/30min"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() =>
-                trackClick("link", "Book a demo", "hero", {
-                  url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "primary",
-                })
-              }
-              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[48px]"
-            >
-              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-              Book a demo
-            </a>
             <button
               onClick={() => {
-                trackClick("button", "Listen to Movo sell", "hero", {
-                  action: isHeroAudioPlaying ? "pause" : "play",
-                  media_type: "audio",
-                });
-                handleHeroAudioPlay();
+                // Removed posthog.capture call
+                setShowVapiPrefill(true);
               }}
-              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px] min-w-[200px] md:min-w-[240px]"
+              className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#D97948] hover:bg-[#C96838] text-white text-sm sm:text-base font-medium rounded-lg transition-all duration-300 hover:shadow-xl hover:scale-105 w-full sm:w-auto cursor-pointer animate-slide-in-out"
             >
-              <div className="relative w-6 h-6 md:w-8 md:h-8 flex items-center justify-center flex-shrink-0">
-                {/* Animated waveform dots */}
-                {isHeroAudioPlaying ? (
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "12px", animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "18px", animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "10px", animationDelay: "300ms" }}
-                    ></div>
-                    <div
-                      className="w-1 bg-white rounded-full animate-pulse"
-                      style={{ height: "14px", animationDelay: "100ms" }}
-                    ></div>
-                  </div>
-                ) : (
-                  <Play className="w-4 h-4 md:w-5 md:h-5" />
-                )}
-              </div>
-              <span className="font-medium whitespace-nowrap text-sm md:text-base">
-                Listen to Movo sell
-              </span>
+              Talk to Movo
+              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
+
+            <a
+              href="https://calendly.com/ari-movo/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {}}
+              className="group flex items-center justify-center gap-3 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white text-sm md:text-base font-medium rounded-lg transition-all duration-300 border border-white/20 backdrop-blur-sm hover:shadow-2xl hover:scale-105 w-full sm:w-auto cursor-pointer min-h-[40px] md:min-h-[48px]"
+            >
+              <span className="font-medium whitespace-nowrap text-sm md:text-base">
+                Book a demo
+              </span>
+            </a>
 
             <audio
               ref={heroAudioRef}
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Video_1-D2xUSPWZjqPYNOsmcPCtTFZXhoqY0u.mp3"
+              src="/audio/hero-intro.mp3"
               className="hidden"
             />
           </div>
@@ -799,11 +1249,11 @@ export default function Home() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-12 lg:gap-16">
               {[
-                "Supreme Hoops",
-                "MPAC Sports",
+                "Elite Baseball Academy",
+                "All Star Sports Academy",
                 "Haifa Swim",
-                "Pro Soccer Academy",
-                "Champion Tennis",
+                "Supreme Hoops",
+                "Pacific Reign",
               ].map((name, i) => (
                 <span
                   key={i}
@@ -816,23 +1266,146 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <button
-        onClick={() => {
-          trackClick("button", "Talk to Movo", "floating_cta", {
-            button_type: "floating",
-            action: "open_call_modal",
-          });
-          setShowCallMe(true);
-        }}
-        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-white text-gray-900 font-semibold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 group cursor-pointer"
-      >
-        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-          <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          {/* Pulsing ring effect */}
-          <div className="absolute inset-0 rounded-lg bg-green-500 animate-ping opacity-40"></div>
-        </div>
-        <span className="text-sm sm:text-base">Talk to Movo</span>
-      </button>
+      {/* Floating call button - shows different states */}
+      {(hasVapiAccess ||
+        isWebCallConnecting ||
+        isWebCallActive ||
+        webCallError) && (
+        <button
+          onClick={() => {
+            if (isWebCallActive) {
+              // End call
+              try {
+                vapiRef.current?.stop?.();
+              } catch {
+                // ignore
+              }
+              setIsWebCallActive(false);
+              setIsWebCallConnecting(false);
+              setHasVapiAccess(false);
+              setWebCallError(null);
+            } else if (isWebCallConnecting) {
+              // Cancel connecting
+              try {
+                vapiRef.current?.stop?.();
+              } catch {
+                // ignore
+              }
+              setIsWebCallConnecting(false);
+              setIsWebCallActive(false);
+              setHasVapiAccess(false);
+              setWebCallError(null);
+            } else if (webCallError) {
+              // Retry - open prefill form again
+              setWebCallError(null);
+              setHasVapiAccess(false);
+              setShowVapiPrefill(true);
+            }
+          }}
+          className={`fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-5 py-3 text-sm shadow-lg backdrop-blur-sm transition-colors cursor-pointer ${
+            webCallError && !isWebCallActive
+              ? "bg-rose-500/90 hover:bg-rose-600 text-white"
+              : isWebCallActive
+                ? "bg-rose-500/90 hover:bg-rose-600 text-white"
+                : "bg-black/80 hover:bg-black text-white"
+          }`}
+        >
+          {isWebCallActive ? (
+            <>
+              <span className="font-medium">End call</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : isWebCallConnecting ? (
+            <>
+              <span className="font-medium">Connecting...</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-semibold">
+                <svg
+                  className="w-3 h-3 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : webCallError ? (
+            <>
+              <span className="font-medium">Retry</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : null}
+        </button>
+      )}
+      {/* CHANGE: Updated to match HappyRobot design - less rounded, narrower, with custom phone icon */}
+      {!hasVapiAccess &&
+        !isWebCallConnecting &&
+        !isWebCallActive &&
+        !webCallError && (
+          <div className="fixed bottom-6 right-6 z-40">
+            <div className="bg-[#8B7355]/15 backdrop-blur-sm rounded-[18px] p-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+              <button
+                onClick={() => {
+                  trackClick("button", "Talk to Movo", "vapi_prefill", {
+                    source: "floating_pill",
+                  });
+                  setShowVapiPrefill(true);
+                }}
+                className="flex items-center gap-3 rounded-[14px] bg-white hover:bg-gray-50 text-gray-900 pl-3 pr-5 py-2.5 text-base font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-200 cursor-pointer"
+              >
+                <span className="flex items-center justify-center w-[42px] h-[42px] rounded-[8px] overflow-hidden flex-shrink-0">
+                  <img
+                    src="/images/phone-icon.png"
+                    alt="Phone"
+                    className="w-full h-full object-cover"
+                  />
+                </span>
+                <span className="font-semibold tracking-tight whitespace-nowrap">
+                  Talk to Movo
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
       <section id="product" className="min-h-screen flex items-center">
         <div className="w-full grid lg:grid-cols-2">
           {/* Left side - White background with content */}
@@ -861,53 +1434,28 @@ export default function Home() {
                 your best rep.
               </p>
 
+              {/* CHANGE: Added "See Movo learn in action" button */}
               <button
-                onClick={() => {
-                  trackClick("button", "Hear Movo learn in action", "product", {
-                    action: isLearnVideoPlaying ? "pause" : "play",
-                    media_type: "audio",
-                  });
-                  handleLearnVideoPlay();
-                }}
-                className="group flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm md:text-base font-medium rounded-sm transition-all duration-300 mb-8 hover:shadow-2xl hover:scale-105 cursor-pointer w-auto max-w-fit"
+                onClick={() =>
+                  playProtectedAudio(
+                    "learn",
+                    learnVideoRef,
+                    setIsLearnVideoPlaying,
+                  )
+                }
+                className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
               >
-                <div className="relative w-4 h-4 md:w-5 md:h-5 flex items-center justify-center flex-shrink-0">
-                  {isLearnVideoPlaying ? (
-                    <div className="flex items-center gap-1">
-                      <div
-                        className="w-0.5 bg-white rounded-full animate-pulse"
-                        style={{ height: "10px", animationDelay: "0ms" }}
-                      ></div>
-                      <div
-                        className="w-0.5 bg-white rounded-full animate-pulse"
-                        style={{ height: "14px", animationDelay: "150ms" }}
-                      ></div>
-                      <div
-                        className="w-0.5 bg-white rounded-full animate-pulse"
-                        style={{ height: "8px", animationDelay: "300ms" }}
-                      ></div>
-                      <div
-                        className="w-0.5 bg-white rounded-full animate-pulse"
-                        style={{ height: "12px", animationDelay: "100ms" }}
-                      ></div>
-                    </div>
-                  ) : (
-                    <Play className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  )}
-                </div>
-                <span className="font-medium whitespace-nowrap text-sm">
-                  Hear Movo learn in action
-                </span>
+                {isLearnVideoPlaying ? (
+                  <Pause className="w-5 h-5" />
+                ) : (
+                  <Play className="w-5 h-5" />
+                )}
+                Hear Movo in action
               </button>
-              <audio
-                ref={learnVideoRef}
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Nadav%20Vieder%20Video%20Nov%2011%202025-j07YSAJHlsf8TfJYGARpfwPwkjIzUn.mp3"
-                className="hidden"
-              />
 
               {/* Numbered features */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <div className="flex gap-4 group cursor-pointer">
+              <div className="space-y-4 pt-6">
+                <div className="flex gap-4">
                   <div className="text-2xl font-bold text-gray-900 flex-shrink-0">
                     01
                   </div>
@@ -921,7 +1469,7 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-4 group cursor-pointer">
+                <div className="flex gap-4">
                   <div className="text-2xl font-bold text-gray-900 flex-shrink-0">
                     02
                   </div>
@@ -935,7 +1483,7 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-4 group cursor-pointer">
+                <div className="flex gap-4">
                   <div className="text-2xl font-bold text-gray-900 flex-shrink-0">
                     03
                   </div>
@@ -958,7 +1506,7 @@ export default function Home() {
             className="relative px-4 sm:px-6 md:px-10 lg:px-12 py-6 sm:py-8 md:py-10 flex items-center justify-center overflow-hidden"
             style={{
               backgroundImage:
-                "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kids%20Playing%20Sport%20Graphic%20Nov%2010%202025%20%282%29-V8JNogRABiiVjppDmMwDRCWb6aV7yD.png)",
+                "url(/images/kids-20playing-20sport-20graphic-20nov-2010-202025-20-282-29.png)",
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -1070,7 +1618,7 @@ export default function Home() {
                       <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-1.5 sm:mb-2">
                         Recent Conversations
                       </h4>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-y-2">
+                      <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 space-y-1.5 sm:space-2">
                         <div className="text-[10px] sm:text-xs text-gray-700">
                           <p>Hi Jessica! Yes, we have two options:</p>
                         </div>
@@ -1082,7 +1630,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-1.5 bg-white border border-green-200 rounded-lg px-2 py-1.5 mt-1.5 sm:mt-2">
                           <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-[9px] sm:text-[10px] font-bold">
+                            <span className="text-white text-xs sm:text-sm">
                               ✓
                             </span>
                           </div>
@@ -1090,8 +1638,8 @@ export default function Home() {
                             <p className="text-[10px] sm:text-xs font-semibold text-gray-900">
                               Trial booked
                             </p>
-                            <p className="text-[9px] sm:text-[10px] text-gray-600">
-                              $150 revenде
+                            <p className="text-[9px] sm:text-xs text-gray-600">
+                              $150 revenue
                             </p>
                           </div>
                         </div>
@@ -1164,10 +1712,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 md:p-6 relative overflow-hidden">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-green-500 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 animate-pulse w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">💰</span>
-                      <span>+$2,300 booked</span>
-                    </div>
+
                     <div className="flex items-center justify-center mb-3 md:mb-4 mt-8 md:mt-6">
                       <div className="w-16 md:w-20 h-16 md:h-20 bg-gray-900 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <Phone className="w-8 md:w-10 h-8 md:h-10 text-white" />
@@ -1177,7 +1722,7 @@ export default function Home() {
                       Handled by Movo
                     </div>
                     <div className="mt-3 md:mt-4 text-center text-xs md:text-sm text-gray-600">
-                      247 calls answered this month
+                      8,047 calls answered this month
                     </div>
                   </div>
                 </div>
@@ -1198,10 +1743,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 md:p-6 space-y-4 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-purple-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">💬</span>
-                      <span>47% conversion</span>
-                    </div>
+
                     <div className="bg-white p-3 md:p-4 rounded-lg shadow-sm mt-8 md:mt-6">
                       <div className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">
                         Text from Movo:
@@ -1257,11 +1799,8 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-orange-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">📈</span>
-                      <span>+85% fill rate</span>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
+
+                    <div className="bg-white rounded-lg p-3 md:p-4 rounded-lg shadow-sm mt-8 md:mt-6">
                       <div className="flex items-center justify-between mb-2 md:mb-3">
                         <div className="text-sm md:text-base font-semibold text-gray-900">
                           Tues 5 PM Swim
@@ -1296,7 +1835,8 @@ export default function Home() {
                   them to interested parents - until they're full.
                 </p>
                 <p className="text-xs md:text-sm italic text-gray-500">
-                  "It actually sells my classes for me" - MPAC Sports
+                  "It actually sells my classes for me" - Elite Baseball
+                  Training
                 </p>
               </div>
 
@@ -1305,10 +1845,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-indigo-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg flex items-center gap-1 md:gap-1.5 w-auto md:w-[240px] justify-center whitespace-nowrap">
-                      <span className="text-xs md:text-sm">🧠</span>
-                      <span>+72% lift</span>
-                    </div>
+
                     <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm mt-8 md:mt-6">
                       <div className="text-[10px] md:text-xs font-semibold text-gray-500 mb-1.5 md:mb-2">
                         Top Converting Offer
@@ -1354,9 +1891,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-4 md:p-6 relative">
                     {/* Live stat badge */}
-                    <div className="absolute top-3 md:top-4 right-2 md:right-4 bg-teal-600 text-white text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-                      ⚙️ 10+ hrs saved
-                    </div>
+
                     <div className="grid grid-cols-3 gap-2 md:gap-3 mt-8 md:mt-6">
                       <div className="bg-white p-2 md:p-3 rounded-lg shadow-sm text-center group-hover:scale-105 transition-transform">
                         <div className="text-xl md:text-2xl mb-0.5 md:mb-1">
@@ -1408,15 +1943,10 @@ export default function Home() {
           {/* CTA */}
           <div className="text-center mt-20">
             <a
-              href="https://calendly.com/ari-movoai/30min"
+              href="https://calendly.com/ari-movo/30min"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
-                trackClick("link", "Book a demo", "solution", {
-                  url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "primary",
-                })
-              }
+              onClick={() => {}}
               className="inline-block px-10 py-5 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer"
             >
               Book a demo
@@ -1425,9 +1955,7 @@ export default function Home() {
         </div>
       </section>
       <section className="bg-gradient-to-b from-blue-50 to-white fade-on-scroll py-[60px]"></section>
-      <div id="success">
-        <SuccessStoriesSection />
-      </div>
+      <SuccessStoriesSection id="success" />
       <section ref={statsRef} className="py-32 bg-white">
         <div className="max-w-[1400px] mx-auto px-8 md:px-16">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
@@ -1441,54 +1969,27 @@ export default function Home() {
                 Every academy using Movo sees new bookings within days -<br />
                 with no extra staff or marketing spend.
               </p>
+              {/* CHANGE: Updated to play audio directly instead of opening modal */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => {
-                    trackClick("button", "Hear Movo in Action", "stats", {
-                      action: isHeroAudioPlaying ? "pause" : "play",
-                      media_type: "audio",
-                    });
-                    handleHeroAudioPlay();
-                  }}
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
+                  onClick={() =>
+                    playProtectedAudio("hearMovo", audioRef, setIsPlaying)
+                  }
+                  className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors"
                 >
-                  <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
-                    {isHeroAudioPlaying ? (
-                      <div className="flex items-center gap-1">
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "16px", animationDelay: "0ms" }}
-                        ></div>
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "24px", animationDelay: "150ms" }}
-                        ></div>
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "14px", animationDelay: "300ms" }}
-                        ></div>
-                        <div
-                          className="w-1 bg-white rounded-full animate-pulse"
-                          style={{ height: "20px", animationDelay: "100ms" }}
-                        ></div>
-                      </div>
-                    ) : (
-                      <Play className="w-5 h-5" />
-                    )}
-                  </div>
-                  <span className="whitespace-nowrap">Hear Movo in Action</span>
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <Play className="w-5 h-5" />
+                  )}
+                  Hear Movo in Action
                 </button>
                 <a
-                  href="https://calendly.com/ari-movoai/30min"
+                  href="https://calendly.com/ari-movo/30min"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() =>
-                    trackClick("link", "Book a Demo", "stats", {
-                      url: "https://calendly.com/ari-movoai/30min",
-                      cta_type: "secondary",
-                    })
-                  }
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
+                  onClick={() => {}}
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-lg border-2 border-gray-900 transition-all duration-300 hover:shadow-xl"
                 >
                   Book a Demo
                 </a>
@@ -1547,27 +2048,32 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             <button
               onClick={() => {
-                trackClick("button", "Call Me", "final_cta", {
-                  button_type: "primary",
-                  action: "open_call_modal",
-                });
-                setShowCallMe(true);
+                // Removed posthog.capture call
+                setShowVapiPrefill(true);
               }}
               className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white text-lg font-medium rounded-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
             >
-              <Phone className="w-5 h-5" />
-              Call Me
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-phone w-5 h-5"
+              >
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              Talk to Movo
             </button>
             <a
-              href="https://calendly.com/ari-movoai/30min"
+              href="https://calendly.com/ari-movo/30min"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
-                trackClick("link", "Book a Demo", "final_cta", {
-                  url: "https://calendly.com/ari-movoai/30min",
-                  cta_type: "secondary",
-                })
-              }
+              onClick={() => {}}
               className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-medium rounded-sm border-2 border-gray-900 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer min-h-[56px]"
             >
               Book a Demo
@@ -1588,66 +2094,95 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-24 bg-white border-t border-gray-200">
         <div className="mx-auto max-w-7xl px-10">
-          {/* Moved disclaimer to bottom, copyright and links first */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <p className="text-gray-600">
-              © 2025 Movo AI, Inc. All rights reserved.
-            </p>
-            <div className="flex items-center gap-8">
+          <div className="flex flex-wrap items-center justify-between gap-6 mb-8">
+            <div>
+              <p className="text-gray-600">
+                © 2025 Movo AI, Inc. All rights reserved.
+              </p>
+            </div>
+
+            {/* Center - Social & Contact (remains centered) */}
+            <div className="flex items-center gap-6">
               <a
-                href="/portal/login"
-                onClick={() =>
-                  trackClick("link", "Portal", "footer", {
-                    url: "/portal/login",
-                    link_type: "navigation",
-                  })
-                }
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                href="https://www.instagram.com/movo.ai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {}}
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+                aria-label="Instagram"
               >
-                Portal
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </a>
               <a
-                href="/terms"
-                onClick={() =>
-                  trackClick("link", "Terms", "footer", {
-                    url: "/terms",
-                    link_type: "legal",
-                  })
-                }
+                href="mailto:contact@movoai.co"
+                onClick={() => {}}
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
-                Terms
+                contact@movoai.co
+              </a>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <a
+                href="/terms"
+                onClick={() => {}}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Terms of Service
               </a>
               <a
                 href="/privacy"
-                onClick={() =>
-                  trackClick("link", "Privacy", "footer", {
-                    url: "/privacy",
-                    link_type: "legal",
-                  })
-                }
+                onClick={() => {}}
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
-                Privacy
+                Privacy Policy
               </a>
             </div>
           </div>
 
+          <div className="flex justify-center items-center gap-6 mt-8">
+            <img
+              src="/images/aicpa-soc-badge.png"
+              alt="AICPA SOC Certified"
+              className="h-20 w-auto"
+            />
+          </div>
+
           <div className="text-center pt-8 border-t border-gray-200">
             <p className="text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Movo AI automates communications and may use AI-generated voice or
-              text responses. Conversations may be recorded or analyzed to
-              improve service quality, consistent with our{" "}
+              By submitting your phone number above, you consent to the{" "}
               <a
-                href="/privacy"
-                onClick={() =>
-                  trackClick("link", "Privacy Policy", "footer", {
-                    url: "/privacy",
-                    link_type: "legal",
-                    context: "disclaimer",
-                  })
-                }
-                className="text-gray-900 underline hover:text-gray-700 transition-colors"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Removed posthog.capture call
+                }}
+                className="text-gray-700 underline hover:text-gray-900"
+              >
+                Mobile Terms
+              </a>{" "}
+              and to receive automated calls (including AI-generated calls) and
+              texts from Movo AI at the number provided. Message and data rates
+              may apply. Frequency may vary. Reply STOP anytime to opt out of
+              texts. Consent is not a condition of purchase. See our{" "}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Removed posthog.capture call
+                }}
+                className="text-gray-700 underline hover:text-gray-900"
               >
                 Privacy Policy
               </a>
@@ -1661,10 +2196,7 @@ export default function Home() {
           <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
             <button
               onClick={() => {
-                trackClick("button", "Close Call Modal", "call_modal", {
-                  action: "close_modal",
-                  modal_type: "call_request",
-                });
+                // Removed posthog.capture call
                 setShowCallMe(false);
               }}
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors text-2xl leading-none"
@@ -1764,6 +2296,29 @@ export default function Home() {
                 />
               </div>
 
+              <div>
+                <label
+                  htmlFor="assistantId"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Assistant ID (optional)
+                </label>
+                <input
+                  id="assistantId"
+                  type="text"
+                  placeholder="Leave blank to use the default assistant"
+                  value={callMeForm.assistantId}
+                  onChange={(e) =>
+                    setCallMeForm({
+                      ...callMeForm,
+                      assistantId: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmittingCall}
+                />
+              </div>
+
               <div className="flex items-start gap-3 pt-2">
                 <input
                   id="newsletter"
@@ -1793,10 +2348,7 @@ export default function Home() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      trackClick("link", "Mobile Terms", "call_modal", {
-                        link_type: "legal",
-                        context: "form_disclaimer",
-                      });
+                      // Removed posthog.capture call
                     }}
                     className="text-gray-700 underline hover:text-gray-900"
                   >
@@ -1811,10 +2363,7 @@ export default function Home() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      trackClick("link", "Privacy Policy", "call_modal", {
-                        link_type: "legal",
-                        context: "form_disclaimer",
-                      });
+                      // Removed posthog.capture call
                     }}
                     className="text-gray-700 underline hover:text-gray-900"
                   >
@@ -1861,57 +2410,227 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showHearMovo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-white rounded-sm p-8 max-w-md w-full">
+
+      {/* Error notification toast */}
+      {webCallError && !isWebCallActive && !isWebCallConnecting && (
+        <div className="fixed bottom-24 right-6 z-50 max-w-sm rounded-lg bg-rose-500/90 text-white px-4 py-3 text-sm shadow-lg backdrop-blur-sm border border-rose-400/20">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="font-medium mb-1">Call Failed</p>
+              <p className="text-white/90 text-xs">{webCallError}</p>
+            </div>
             <button
               onClick={() => {
-                trackClick("button", "Close Audio Modal", "audio_modal", {
-                  action: "close_modal",
-                  modal_type: "audio_demo",
-                });
-                setShowHearMovo(false);
+                setWebCallError(null);
+                setHasVapiAccess(false);
               }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              className="text-white/80 hover:text-white transition"
             >
-              ✕
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
-            <h2 className="text-2xl font-bold mb-4">Hear Movo Sell</h2>
-            <p className="text-gray-600 mb-6">
-              Listen to how Movo handles a real parent inquiry
-            </p>
-            <audio
-              ref={audioRef}
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Mono%20Audio%20File%20%281%29-Ky1VPeJmOkmuanheihF0JpGzdJSFY3.wav"
-              className="hidden"
-            />
-            <button
-              onClick={() => {
-                trackClick(
-                  "button",
-                  `${isPlaying ? "Pause" : "Play"} Audio`,
-                  "audio_modal",
-                  { action: isPlaying ? "pause" : "play", media_type: "audio" }
-                );
-                handlePlayAudio();
-              }}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#D97948] hover:bg-[#C96838] text-white rounded-sm"
-            >
-              {isPlaying ? (
-                <Pause className="w-5 h-5" />
-              ) : (
-                <Play className="w-5 h-5" />
-              )}
-              {isPlaying ? "Pause" : "Play"} Audio
-            </button>
-            {audioProgress > 0 && (
-              <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-[#D97948] h-2 rounded-full transition-all"
-                  style={{ width: `${audioProgress}%` }}
+          </div>
+        </div>
+      )}
+      {/* Hidden audio element for "Hear Movo in Action" button */}
+      <audio
+        ref={audioRef} // Changed from heroAudioRef to audioRef for general audio playback
+        onTimeUpdate={() => {
+          if (audioRef.current) {
+            // Ensure audioRef.current is not null and duration is valid before calculating progress
+            if (
+              !audioRef.current ||
+              isNaN(audioRef.current.duration) ||
+              audioRef.current.duration === 0
+            )
+              return;
+            const progress =
+              (audioRef.current.currentTime / audioRef.current.duration) * 100;
+            setAudioProgress(progress);
+          }
+        }}
+        onEnded={() => {
+          setIsPlaying(false);
+          setAudioProgress(0);
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        controlsList="nodownload"
+      />
+
+      {/* CHANGE: Adding missing Vapi prefill form modal */}
+      {showVapiPrefill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                  BEFORE YOU START
+                </p>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  Share a few details
+                </h2>
+                <p className="text-gray-500">
+                  We'll use this so Movo can personalize the conversation.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowVapiPrefill(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleVapiPrefillSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="vapi-name"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  NAME
+                </label>
+                <input
+                  id="vapi-name"
+                  type="text"
+                  value={vapiUserInfo.name}
+                  onChange={(e) =>
+                    setVapiUserInfo({ ...vapiUserInfo, name: e.target.value })
+                  }
+                  placeholder="Alex Johnson"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
                 />
               </div>
-            )}
+
+              <div>
+                <label
+                  htmlFor="vapi-email"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  EMAIL
+                </label>
+                <input
+                  id="vapi-email"
+                  type="email"
+                  value={vapiUserInfo.email}
+                  onChange={(e) =>
+                    setVapiUserInfo({ ...vapiUserInfo, email: e.target.value })
+                  }
+                  placeholder="you@academy.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="vapi-phone"
+                  className="block text-sm font-medium text-gray-500 uppercase tracking-wide mb-2"
+                >
+                  PHONE
+                </label>
+                <input
+                  id="vapi-phone"
+                  type="tel"
+                  value={vapiUserInfo.phone}
+                  onChange={(e) =>
+                    setVapiUserInfo({ ...vapiUserInfo, phone: e.target.value })
+                  }
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97948] focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input
+                  id="vapi-consent"
+                  type="checkbox"
+                  checked={vapiConsentChecked}
+                  onChange={(e) => setVapiConsentChecked(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-[#D97948] border-gray-300 rounded focus:ring-[#D97948]"
+                  required
+                />
+                <label
+                  htmlFor="vapi-consent"
+                  className="text-xs text-gray-500 leading-relaxed"
+                >
+                  I agree to receive automated robocall and SMS messages from
+                  Movo AI related to my inquiry or reservation. Message and data
+                  rates may apply. Frequency varies. Reply STOP to opt out or
+                  HELP for help. Consent is not a condition of purchase. You
+                  also agree to our{" "}
+                  <a
+                    href="https://www.movoai.co/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-700"
+                  >
+                    Privacy Policy
+                  </a>{" "}
+                  and our{" "}
+                  <a
+                    href="https://www.movoai.co/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gray-700"
+                  >
+                    Terms of Service
+                  </a>
+                  .
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={
+                  !vapiUserInfo.name ||
+                  !vapiUserInfo.email ||
+                  !vapiUserInfo.phone ||
+                  !vapiConsentChecked ||
+                  isWebCallConnecting
+                }
+                className="w-full py-3 bg-[#D97948] hover:bg-[#C96838] text-white font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isWebCallConnecting ? "Connecting..." : "Start Call"}
+              </button>
+            </form>
           </div>
         </div>
       )}

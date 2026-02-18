@@ -19,10 +19,9 @@ const nextConfig = {
         source: "/ingest/:path*",
         destination: "https://us.i.posthog.com/:path*",
       },
-    ];
+    ]
   },
-  // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
-};
+}
 
-export default nextConfig;
+export default nextConfig
